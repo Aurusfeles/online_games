@@ -16,7 +16,7 @@ export default {
   },
 
   serverMiddleware: [
-    { path: "/api", handler: "~/api/index.js" },
+    { path: "/codenames", handler: "~/api/codenames.js" },
   ],
 
   // Global CSS (https://go.nuxtjs.dev/config-css)

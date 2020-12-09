@@ -88,11 +88,8 @@ export default {
   },
   methods:{
     async test_axios(){
-      const config = {
-    headers: { "content-type": "multipart/form-data" }
-};
-
-      console.log(await this.$axios.$post("/api/date",{body:{test:"teeeest"},premier:"coucou",deuxieme:"recoucou"}))
+      
+      console.log(await this.$axios.$post("/codenames/create_game",{body:{test:"teeeest"},premier:"coucou",deuxieme:"recoucou"}))
     
     }
   }

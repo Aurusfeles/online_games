@@ -1,26 +1,18 @@
 const bodyParser = require('body-parser')
 const app = require('express')()
+const socket = require('socket.io')
 
-
-var fs = require('fs');
 var words_file = require('./fr_words.json');
-var firebase_admin = require('firebase-admin');
-
-
-var firebase_credentials = require('./firebase_credentials.json');
-
-if (firebase_admin.apps.length == 0) {
-    firebase_admin.initializeApp({
-        credential: firebase_admin.credential.cert(firebase_credentials),
-        databaseURL: "https://aurus-games-default-rtdb.firebaseio.com",
-        authDomain: "aurus-games.firebaseapp.com",
-    });
-}
-
-var firebase_db = firebase_admin.database();
-
 
 app.use(bodyParser.json());
+
+var games = {
+
+}
+
+
+let server = null
+let io = null
 
 const code_chars = [
     "A",
@@ -118,8 +110,23 @@ function generate_word_colors(starting_color) {
     return shuffle(colors)
 }
 
+
 app.post('/create_game', (req, res) => {
-    let ref = firebase_db.ref("/games")
+    // Création du serveur, et gestion des différents messages
+    if (!server) {
+        server = res.connection.server;
+        console.log(res.connection.server)
+        io = socket(server);
+
+        io.on('connection', function (socket) {
+            console.log('Made socket connection');
+            socket.on('join_game', msg => {
+                let game = games[msg.game_code]
+                socket.emit('game_data', games[new_game_code]);
+            });
+            socket.on('disconnect', () => console.log('disconnected'));
+        })
+    }
     let new_game_code = generate_game_code()
     let word_list = generate_word_list()
     let word_colors = generate_word_colors("blue")
@@ -128,13 +135,8 @@ app.post('/create_game', (req, res) => {
     for (let i = 0; i < 25; i++) {
         words[word_list[i]] = { "color": word_colors[i], "visible": false }
     }
-    // A FAIRE: vérifier que le code n'éxiste pas déjà
-    ref.child(new_game_code).set(
-        { type: "codenames", started_on: Date.now(), words: words, players: {} }
-    )
+    games[new_game_code] = { started_on: Date.now(), words: words, players: {} }
     res.json({ game_code: new_game_code })
-
-
 })
 
 module.exports = app

@@ -8,6 +8,18 @@
     <div v-else>
       {{ game_code }}
     </div>
+    <div
+      class="chat_box"
+      style="height: 100px; overflow: hidden; position: relative"
+    >
+      <div class="floating_div" style="position: absolute; bottom: 0">
+        <span v-for="(message, message_key) in global_chat" :key="message_key">
+          <span class="message_player_name">{{ message.player.name }}</span
+          >:<span class="message">{{ message.text }}</span
+          ><br />
+        </span>
+      </div>
+    </div>
     <input v-model="msg_to_send" placeholder="message..." />
     <button @click="send_msg">Send</button>
   </div>
@@ -15,14 +27,6 @@
 
 <script>
 export default {
-  head: {
-    script: [
-      {
-        src:
-          "https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js",
-      },
-    ],
-  },
   data() {
     return {
       game_code_to_join: "",
@@ -31,6 +35,8 @@ export default {
       game_code: "",
       socket: null,
       game_data: {},
+      player: { name: "aurus" },
+      global_chat: [],
     };
   },
   computed: {},
@@ -40,7 +46,11 @@ export default {
   },
   mounted() {
     this.socket = io();
-    this.socket.on("game_data", (game_data) => (this.game_data = game_data));
+    this.socket.on("game_data", (msg) => {
+      this.game_code = msg.game_code;
+      this.game_data = msg.game_data;
+    });
+    this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     if (this.slug) {
       this.game_code_to_join = this.slug;
     }
@@ -50,7 +60,7 @@ export default {
       this.$axios
         .$post("/codenames/create_game")
         .then(
-          (response) => (this.game_code = response.game_code)
+          (response) => this.$router.push("/codenames/" + response.game_code)
           // rediriger vers une page avec un slug codenames/W5KG
         )
         .catch((error) => (this.error = error));
@@ -60,7 +70,11 @@ export default {
       this.socket.emit("join_game", { game_code: this.game_code_to_join });
     },
     send_msg() {
-      return;
+      this.socket.emit("msg_global", {
+        game_code: this.game_code,
+        msg: { text: this.msg_to_send, player: this.player },
+      });
+      this.msg_to_send = "";
     },
   },
 };

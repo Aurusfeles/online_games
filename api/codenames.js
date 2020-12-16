@@ -121,8 +121,12 @@ app.post('/create_game', (req, res) => {
         io.on('connection', function (socket) {
             console.log('Made socket connection');
             socket.on('join_game', msg => {
-                let game = games[msg.game_code]
-                socket.emit('game_data', games[new_game_code]);
+                socket.emit('game_data', { game_code: msg.game_code, game_data: games[msg.game_code] });
+            });
+            socket.on('msg_global', msg => {
+                let game = games[msg.game_code];
+                game.chat.push(msg.msg);
+                io.emit('msg_global', msg.msg);
             });
             socket.on('disconnect', () => console.log('disconnected'));
         })
@@ -135,7 +139,7 @@ app.post('/create_game', (req, res) => {
     for (let i = 0; i < 25; i++) {
         words[word_list[i]] = { "color": word_colors[i], "visible": false }
     }
-    games[new_game_code] = { started_on: Date.now(), words: words, players: {} }
+    games[new_game_code] = { started_on: Date.now(), words: words, players: {}, chat: [] }
     res.json({ game_code: new_game_code })
 })
 

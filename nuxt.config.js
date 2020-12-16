@@ -1,7 +1,9 @@
 import colors from 'vuetify/es5/util/colors'
 
 export default {
-  // Global page headers (https://go.nuxtjs.dev/config-head)
+  ssr: false,
+
+  // Global page headers (https://go.nuxtjs.dev/config-head)  
   head: {
     titleTemplate: '%s - aurus-games-nuxt',
     title: 'aurus-games-nuxt',
@@ -12,7 +14,12 @@ export default {
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
-    ]
+    ],
+    script: [
+      {
+        src: "https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js",
+      }
+    ],
   },
 
   serverMiddleware: [

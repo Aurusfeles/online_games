@@ -1,7 +1,7 @@
 <template>
   <v-row justify="center" align="center">
     <v-col cols="12" sm="8" md="6">
-      <nuxt-link to="/codenames" class="link"> codenames </nuxt-link>
+      <div @click="create" to="/codenames" class="link">codenames</div>
       <div v-if="error">
         {{ error }}
       </div>
@@ -17,6 +17,17 @@ export default {
     };
   },
   components: {},
-  methods: {},
+  methods: {
+    create() {
+      this.$axios
+        .$post("/codenames/create_game")
+        .then(
+          (response) => this.$router.push("/codenames/" + response.game_code)
+          // rediriger vers une page avec un slug codenames/W5KG
+        )
+        .catch((error) => (this.error = error));
+      return;
+    },
+  },
 };
 </script>

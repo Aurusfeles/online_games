@@ -1,6 +1,5 @@
 <template>
   <div>
-    <button @click="create">Create</button>
     <div v-if="game_code == ''">
       <input v-model="game_code_to_join" placeholder="gamecode to join" />
       <button @click="join">Join</button>
@@ -49,6 +48,7 @@ export default {
     this.socket.on("game_data", (msg) => {
       this.game_code = msg.game_code;
       this.game_data = msg.game_data;
+      this.global_chat = msg.game_data.chat;
     });
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     if (this.slug) {
@@ -56,18 +56,11 @@ export default {
     }
   },
   methods: {
-    create() {
-      this.$axios
-        .$post("/codenames/create_game")
-        .then(
-          (response) => this.$router.push("/codenames/" + response.game_code)
-          // rediriger vers une page avec un slug codenames/W5KG
-        )
-        .catch((error) => (this.error = error));
-      return;
-    },
     join() {
-      this.socket.emit("join_game", { game_code: this.game_code_to_join });
+      this.socket.emit("join_game", {
+        game_code: this.game_code_to_join,
+        player: { name: this.name, role: this.role },
+      });
     },
     send_msg() {
       this.socket.emit("msg_global", {

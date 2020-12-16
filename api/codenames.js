@@ -121,6 +121,7 @@ app.post('/create_game', (req, res) => {
         io.on('connection', function (socket) {
             console.log('Made socket connection');
             socket.on('join_game', msg => {
+                socket.join(msg.game_code);
                 let game = games[msg.game_code];
                 if (game) {
                     socket.emit('game_data', { game_code: msg.game_code, game_data: games[msg.game_code] });
@@ -130,7 +131,7 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     game.chat.push(msg.msg);
-                    io.emit('msg_global', msg.msg);
+                    io.to(msg.game_code).emit('msg_global', msg.msg);
                 }
             });
             socket.on('disconnect', () => console.log('disconnected'));

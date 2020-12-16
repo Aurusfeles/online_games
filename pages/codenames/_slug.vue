@@ -21,6 +21,19 @@
     </div>
     <input v-model="msg_to_send" placeholder="message..." />
     <button @click="send_msg">Send</button>
+    <div class="word_list">
+      <div
+        v-for="(word, word_key, word_index) in word_list"
+        :key="word_index"
+        :style="{
+          'grid-column': (word_index % 5) + 1,
+          'grid-row': parseInt(word_index / 5) + 1,
+        }"
+        :class="word.color"
+      >
+        {{ word_key }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -36,6 +49,7 @@ export default {
       game_data: {},
       player: { name: "aurus" },
       global_chat: [],
+      word_list: {},
     };
   },
   computed: {},
@@ -49,6 +63,7 @@ export default {
       this.game_code = msg.game_code;
       this.game_data = msg.game_data;
       this.global_chat = msg.game_data.chat;
+      this.word_list = msg.game_data.words;
     });
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     if (this.slug) {
@@ -74,4 +89,7 @@ export default {
 </script>
 
 <style>
+.word_list {
+  display: grid;
+}
 </style>

@@ -47,7 +47,7 @@ export default {
       game_code: "",
       socket: null,
       game_data: {},
-      player: { name: "aurus" },
+      player: { name: "aurus", role: "guess" },
       global_chat: [],
       word_list: {},
     };
@@ -74,7 +74,7 @@ export default {
     join() {
       this.socket.emit("join_game", {
         game_code: this.game_code_to_join,
-        player: { name: this.name, role: this.role },
+        player: this.player,
       });
     },
     send_msg() {

@@ -110,6 +110,14 @@ function generate_word_colors(starting_color) {
     return shuffle(colors)
 }
 
+function clean_words(game) {
+    let clean_game = JSON.parse(JSON.stringify(game));
+    for (word in clean_game.words) {
+        clean_game.words[word].color = "unknown";
+    }
+    return clean_game;
+}
+
 
 app.post('/create_game', (req, res) => {
     // Création du serveur, et gestion des différents messages
@@ -124,7 +132,10 @@ app.post('/create_game', (req, res) => {
                 socket.join(msg.game_code);
                 let game = games[msg.game_code];
                 if (game) {
-                    socket.emit('game_data', { game_code: msg.game_code, game_data: games[msg.game_code] });
+                    if (msg.player.role == "guess") {
+                        game = clean_words(game);
+                    }
+                    socket.emit('game_data', { game_code: msg.game_code, game_data: game });
                 }
             });
             socket.on('msg_global', msg => {
@@ -143,7 +154,7 @@ app.post('/create_game', (req, res) => {
     let words = {}
 
     for (let i = 0; i < 25; i++) {
-        words[word_list[i]] = { "color": word_colors[i], "visible": false }
+        words[word_list[i]] = { "color": word_colors[i], "flipped": false }
     }
     games[new_game_code] = { started_on: Date.now(), words: words, players: {}, chat: [] }
     res.json({ game_code: new_game_code })

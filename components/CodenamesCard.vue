@@ -6,7 +6,9 @@
     :outlined="!word_info.flipped"
     x-large
   >
-    {{ word }}
+    <v-icon v-if="this.word_info.color == 'black'" left>mdi-skull</v-icon
+    >{{ word
+    }}<v-icon right v-if="this.word_info.color == 'black'">mdi-skull</v-icon>
   </v-btn>
 </template>
 

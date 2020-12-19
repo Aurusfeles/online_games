@@ -63,7 +63,7 @@ export default {
       game_code: "",
       socket: null,
       game_data: {},
-      player: { name: "aurus", role: "guess" },
+      player: { name: "", role: "" },
       global_chat: [],
       word_list: {},
     };
@@ -115,7 +115,9 @@ export default {
       this.msg_to_send = "";
     },
     return_card(word) {
-      console.log("hey!");
+      if (this.player.role != "tell") {
+        return;
+      }
       this.socket.emit("return_card", {
         game_code: this.game_code,
         word: word,

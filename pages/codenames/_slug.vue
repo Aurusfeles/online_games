@@ -46,8 +46,19 @@
           'grid-column': (word_index % 5) + 1,
           'grid-row': parseInt(word_index / 5) + 1,
         }"
-        @dblclick.native="return_card(word)"
+        @click.native="selected_card = word"
       />
+      <v-overlay :absolute="true" :value="selected_card != ''">
+        <CodenamesCard
+          v-if="selected_card != ''"
+          :word="selected_card"
+          :word_info="word_list[selected_card]"
+          filled
+        />
+        <p>Return this card?</p>
+        <v-btn color="success" @click="return_selected_card">Yes! </v-btn>
+        <v-btn color="error" @click="selected_card = ''">No! </v-btn>
+      </v-overlay>
     </div>
   </div>
 </template>
@@ -57,6 +68,7 @@ import CodenamesCard from "~/components/CodenamesCard";
 export default {
   data() {
     return {
+      selected_card: "",
       game_code_to_join: "",
       msg_to_send: "",
       game_messages: "",
@@ -114,14 +126,15 @@ export default {
       });
       this.msg_to_send = "";
     },
-    return_card(word) {
+    return_selected_card() {
       if (this.player.role != "tell") {
         return;
       }
       this.socket.emit("return_card", {
         game_code: this.game_code,
-        word: word,
+        word: this.selected_card,
       });
+      this.selected_card = "";
     },
   },
 };

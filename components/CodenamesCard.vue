@@ -3,8 +3,8 @@
     :color="color"
     class="ma-1"
     :light="light"
-    :outlined="!word_info.flipped"
-    x-large
+    :outlined="!word_info.flipped && !filled"
+    x-small
   >
     <v-icon v-if="this.word_info.color == 'black'" left>mdi-skull</v-icon
     >{{ word
@@ -17,6 +17,7 @@ export default {
   props: {
     word: { type: String },
     word_info: { type: Object },
+    filled: { type: Boolean, default: false },
   },
   computed: {
     light() {
@@ -31,7 +32,9 @@ export default {
         case "white":
           return this.word_info.color;
         case "black":
-          return this.word_info.flipped ? "grey darken-3" : "grey";
+          return this.word_info.flipped || this.filled
+            ? "grey darken-3"
+            : "grey";
         default:
           return "orange lighten-5";
       }

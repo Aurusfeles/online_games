@@ -1,15 +1,7 @@
 <template>
-  <v-app dark>    
-    <v-main>
-      <v-container>
-        <nuxt />
-      </v-container>
-    </v-main>    
-  </v-app>
+  <nuxt />
 </template>
 
 <script>
-export default {
-  
-}
+export default {};
 </script>

@@ -1,12 +1,27 @@
 <template>
   <div>
     <div v-if="game_code == ''">
-      <input v-model="game_code_to_join" placeholder="gamecode to join" />
-      <button @click="join">Join</button>
+      <div class="player_form">
+        <v-text-field
+          v-model="player.name"
+          placeholder="Your name?"
+          label="name"
+          outlined
+        ></v-text-field>
+        <input />
+        <input type="radio" id="guess" value="guess" v-model="player.role" />
+        <label for="guess">I'll guess!</label>
+        <br />
+        <input type="radio" id="tell" value="tell" v-model="player.role" />
+        <label for="tell">I'll tell!</label>
+        <input v-model="game_code_to_join" placeholder="gamecode to join" />
+        <button @click="join" :disabled="!ok_to_join">Join</button>
+      </div>
     </div>
     <div v-else>
       {{ game_code }}
     </div>
+
     <div
       class="chat_box"
       style="height: 100px; overflow: hidden; position: relative"
@@ -22,22 +37,23 @@
     <input v-model="msg_to_send" placeholder="message..." />
     <button @click="send_msg">Send</button>
     <div class="word_list">
-      <div
-        v-for="(word, word_key, word_index) in word_list"
+      <CodenamesCard
+        v-for="(word_info, word, word_index) in word_list"
+        :word="word"
+        :word_info="word_info"
         :key="word_index"
         :style="{
           'grid-column': (word_index % 5) + 1,
           'grid-row': parseInt(word_index / 5) + 1,
         }"
-        :class="word.color"
-      >
-        {{ word_key }}
-      </div>
+        @dblclick.native="return_card(word)"
+      />
     </div>
   </div>
 </template>
 
 <script>
+import CodenamesCard from "~/components/CodenamesCard";
 export default {
   data() {
     return {
@@ -52,7 +68,17 @@ export default {
       word_list: {},
     };
   },
-  computed: {},
+  components: { CodenamesCard },
+  computed: {
+    ok_to_join() {
+      return (
+        this.player.name != "" &&
+        this.player.role != "" &&
+        this.game_code_to_join != ""
+      );
+    },
+  },
+  layout: "vtify",
   async asyncData({ params }) {
     const slug = params.slug; // When calling /abc the slug will be "abc"
     return { slug };
@@ -65,6 +91,10 @@ export default {
       this.global_chat = msg.game_data.chat;
       this.word_list = msg.game_data.words;
     });
+    this.socket.on("card_reveal", (msg) => {
+      this.word_list[msg.word] = msg.word_info;
+    });
+
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     if (this.slug) {
       this.game_code_to_join = this.slug;
@@ -83,6 +113,13 @@ export default {
         msg: { text: this.msg_to_send, player: this.player },
       });
       this.msg_to_send = "";
+    },
+    return_card(word) {
+      console.log("hey!");
+      this.socket.emit("return_card", {
+        game_code: this.game_code,
+        word: word,
+      });
     },
   },
 };

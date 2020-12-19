@@ -145,6 +145,16 @@ app.post('/create_game', (req, res) => {
                     io.to(msg.game_code).emit('msg_global', msg.msg);
                 }
             });
+            socket.on('return_card', msg => {
+                let game = games[msg.game_code];
+                if (game) {
+                    console.log("ok, on retourne!")
+                    if (!game.words[msg.word].flipped) {
+                        game.words[msg.word].flipped = true;
+                        io.to(msg.game_code).emit('card_reveal', { word: msg.word, word_info: game.words[msg.word] });
+                    }
+                }
+            });
             socket.on('disconnect', () => console.log('disconnected'));
         })
     }

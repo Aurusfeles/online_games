@@ -123,7 +123,6 @@ app.post('/create_game', (req, res) => {
     // Création du serveur, et gestion des différents messages
     if (!server) {
         server = res.connection.server;
-        console.log(res.connection.server)
         io = socket(server);
 
         io.on('connection', function (socket) {

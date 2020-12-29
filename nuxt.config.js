@@ -27,6 +27,7 @@ export default {
 
   serverMiddleware: [
     { path: "/codenames", handler: "~/api/codenames.js" },
+    { path: "/decrypto", handler: "~/api/decrypto.js" },
   ],
 
   // Global CSS (https://go.nuxtjs.dev/config-css)

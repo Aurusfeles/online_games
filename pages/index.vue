@@ -1,11 +1,10 @@
 <template>
   <v-row justify="center" align="center">
-    <v-col cols="12" sm="8" md="6">
-      <div @click="create" to="/codenames" class="link">codenames</div>
-      <div v-if="error">
-        {{ error }}
-      </div>
-    </v-col>
+    <div @click="create" to="/codenames" class="link">codenames</div>
+    <div @click="create" to="/decrypto" class="link">decrypto</div>
+    <div v-if="error">
+      {{ error }}
+    </div>
   </v-row>
 </template>
 

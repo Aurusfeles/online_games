@@ -1,7 +1,9 @@
 <template>
   <v-row justify="center" align="center">
-    <div @click="create" to="/codenames" class="link">codenames</div>
-    <div @click="create" to="/decrypto" class="link">decrypto</div>
+    <div @click="create('codenames')" to="/codenames" class="link">
+      codenames
+    </div>
+    <div @click="create('decrypto')" to="/decrypto" class="link">decrypto</div>
     <div v-if="error">
       {{ error }}
     </div>
@@ -17,11 +19,11 @@ export default {
   },
   components: {},
   methods: {
-    create() {
+    create(game) {
       this.$axios
-        .$post("/codenames/create_game")
+        .$post("/" + game + "/create_game")
         .then(
-          (response) => this.$router.push("/codenames/" + response.game_code)
+          (response) => this.$router.push("/" + game + "/" + response.game_code)
           // rediriger vers une page avec un slug codenames/W5KG
         )
         .catch((error) => (this.error = error));

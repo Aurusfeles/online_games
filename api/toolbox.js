@@ -34,6 +34,10 @@ const code_chars = [
     "9",
 ]
 
+export function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
 export function shuffle(array_to_shuffle) {
     // returns array_to_shuffle with random order
     var ctr = array_to_shuffle.length, temp, index;

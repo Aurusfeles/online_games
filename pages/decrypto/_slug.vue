@@ -22,32 +22,37 @@
         <button @click="join" :disabled="!ok_to_join">Join</button>
       </div>
     </div>
-    <div v-else>
-      {{ game_code }}
-    </div>
-
-    <div
-      class="chat_box"
-      style="height: 100px; overflow: hidden; position: relative"
-    >
-      <div class="floating_div" style="position: absolute; bottom: 0">
-        <span v-for="(message, message_key) in global_chat" :key="message_key">
-          <span class="message_player_name">{{ message.player.name }}</span
-          >:<span class="message">{{ message.text }}</span
-          ><br />
-        </span>
+    <div v-else class="game_page">
+      <div class="word_section">
+        <div
+          class="word"
+          v-for="(word, word_index) in word_list"
+          :key="word_index"
+        >
+          {{ word }}
+        </div>
       </div>
-    </div>
-    <input v-model="msg_to_send" placeholder="message..." />
-    <button @click="send_msg">Send</button>
-    <div class="word_list">
-      <div
-        class="word"
-        v-for="(word, word_index) in word_list"
-        :key="word_index"
-      >
-        {{ word }}
+      <div class="team_section">white<br />black</div>
+      <div class="chat_section">
+        <div
+          class="chat_box"
+          style="height: 100px; overflow: hidden; position: relative"
+        >
+          <div class="floating_div" style="position: absolute; bottom: 0">
+            <span
+              v-for="(message, message_key) in global_chat"
+              :key="message_key"
+            >
+              <span class="message_player_name">{{ message.player.name }}</span
+              >:<span class="message">{{ message.text }}</span
+              ><br />
+            </span>
+          </div>
+        </div>
+        <input v-model="msg_to_send" placeholder="message..." />
+        <button @click="send_msg">Send</button>
       </div>
+      <div class="clue_section">blabla</div>
     </div>
   </div>
 </template>
@@ -120,14 +125,49 @@ export default {
 </script>
 
 <style>
-.word_list {
+.game_page {
+  position: relative;
+  flex-wrap: wrap;
+}
+.word_section {
+  position: absolute;
+  top: 0px;
+  left: 0px;
   display: flex;
   width: 75vw;
   height: 25vh;
+  justify-content: space-evenly;
+  background-color: rgb(124, 88, 252);
 }
 .word {
   width: 15vw;
   height: 10vh;
   background-color: blue;
+}
+
+.team_section {
+  position: absolute;
+  top: 0vh;
+  left: 75vw;
+  width: 25vw;
+  height: 25vh;
+  background-color: darkblue;
+}
+
+.chat_section {
+  position: absolute;
+  top: 25vh;
+  left: 0px;
+  width: 60vw;
+  height: 75vh;
+  background-color: cornflowerblue;
+}
+.clue_section {
+  position: absolute;
+  top: 25vh;
+  left: 60vw;
+  width: 40vw;
+  height: 75vh;
+  background-color: rgb(252, 220, 162);
 }
 </style>

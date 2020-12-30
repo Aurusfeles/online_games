@@ -48,7 +48,27 @@
           {{ word }}
         </div>
       </div>
-      <div class="team_section">white<br />black</div>
+      <div class="team_section">
+        <div
+          class="team"
+          v-for="(team, team_name, team_index) in game_data.teams"
+          :key="team_index"
+        >
+          <div class="team_name">{{ team_name }}</div>
+          <div
+            class="player"
+            v-for="(player_obj, player_index) in team.players"
+            :key="player_index"
+          >
+            <div
+              class="player_name"
+              :class="{ you: player_obj.name == player.name }"
+            >
+              {{ player_obj.name }}
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="chat_section">
         <div
           class="chat_box"
@@ -114,6 +134,10 @@ export default {
       this.global_chat = msg.game_data.chat;
       this.word_list = msg.game_data.teams[this.team].words;
       this.team_chat = msg.game_data.teams[this.team].chat;
+    });
+    this.socket.on("new_player", (msg) => {
+      console.log("nouveau");
+      this.game_data.teams[msg.team].players.push(msg.player);
     });
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     this.socket.on("msg_team", (msg) => this.team_chat.push(msg));
@@ -184,6 +208,8 @@ export default {
 
 .team_section {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   top: 0vh;
   left: 75vw;
   width: 25vw;
@@ -215,5 +241,19 @@ export default {
 }
 .player_form input {
   color: aliceblue;
+}
+
+.team {
+  border: 1px solid #ffffff;
+  flex-grow: 1;
+}
+
+.team .you {
+  font-weight: bold;
+}
+
+.team_name {
+  font-weight: bold;
+  background: rgba(240, 248, 255, 0.205);
 }
 </style>

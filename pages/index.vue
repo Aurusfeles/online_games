@@ -1,13 +1,13 @@
 <template>
-  <v-row justify="center" align="center">
-    <div @click="create('codenames')" to="/codenames" class="link">
+  <div class="game_list">
+    <div @click="create('codenames')" to="/codenames" class="game">
       codenames
     </div>
-    <div @click="create('decrypto')" to="/decrypto" class="link">decrypto</div>
+    <div @click="create('decrypto')" to="/decrypto" class="game">decrypto</div>
     <div v-if="error">
       {{ error }}
     </div>
-  </v-row>
+  </div>
 </template>
 
 <script>
@@ -32,3 +32,26 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.game_list {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.game {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  width: 30vw;
+  font-size: 5vh;
+  text-transform: uppercase;
+  background-color: deeppink;
+  border-radius: 1vh;
+  padding: 1vh;
+}
+</style>

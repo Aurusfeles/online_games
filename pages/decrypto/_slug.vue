@@ -2,27 +2,43 @@
   <div>
     <div v-if="game_code == ''">
       <div class="player_form">
-        <v-text-field
-          v-model="player.name"
-          placeholder="Your name?"
-          label="name"
-          outlined
-        ></v-text-field>
-        <input />
-        <input type="radio" id="white" value="white" v-model="team" />
-        <label for="guess">White team!</label>
-        <br />
-        <input type="radio" id="black" value="black" v-model="team" />
-        <label for="black">Black team!</label>
-        <br />
-        <input type="radio" id="idc" value="idc" v-model="team" />
-        <label for="black">I don't care!</label>
-        <br />
-        <input v-model="game_code_to_join" placeholder="gamecode to join" />
+        <div class="name">
+          <label for="name">Your name: </label>
+          <input
+            v-model="player.name"
+            placeholder="enter your name here"
+            label="name"
+            id="name"
+            outlined
+          />
+        </div>
+
+        <div class="team">
+          <input type="radio" id="white" value="white" v-model="team" />
+          <label for="guess">White team!</label>
+          <br />
+          <input type="radio" id="black" value="black" v-model="team" />
+          <label for="black">Black team!</label>
+          <br />
+          <input type="radio" id="idc" value="idc" v-model="team" />
+          <label for="black">I don't care!</label>
+        </div>
+        <label for="game_code_to_join">Game code to join</label>
+        <input
+          v-model="game_code_to_join"
+          id="game_code_to_join"
+          placeholder="enter game code here"
+        />
         <button @click="join" :disabled="!ok_to_join">Join</button>
       </div>
     </div>
     <div v-else class="game_page">
+      <div class="word_number_section">
+        <div>1</div>
+        <div>2</div>
+        <div>3</div>
+        <div>4</div>
+      </div>
       <div class="word_section">
         <div
           class="word"
@@ -92,6 +108,7 @@ export default {
   mounted() {
     this.socket = io();
     this.socket.on("game_data", (msg) => {
+      this.team = msg.team;
       this.game_code = msg.game_code;
       this.game_data = msg.game_data;
       this.global_chat = msg.game_data.chat;
@@ -129,20 +146,40 @@ export default {
   position: relative;
   flex-wrap: wrap;
 }
+.word_number_section {
+  position: absolute;
+  top: 0vh;
+  left: 0vw;
+  display: flex;
+  align-items: flex-end;
+  width: 75vw;
+  height: 10vh;
+  font-size: 3vh;
+  justify-content: space-around;
+  background-color: rgb(124, 88, 230);
+}
 .word_section {
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: 10vh;
+  left: 0vw;
   display: flex;
+  align-items: flex-start;
   width: 75vw;
-  height: 25vh;
+  height: 15vh;
   justify-content: space-evenly;
   background-color: rgb(124, 88, 252);
 }
 .word {
-  width: 15vw;
+  width: 18vw;
   height: 10vh;
   background-color: blue;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  font-size: 3vh;
+
+  text-transform: uppercase;
 }
 
 .team_section {
@@ -169,5 +206,14 @@ export default {
   width: 40vw;
   height: 75vh;
   background-color: rgb(252, 220, 162);
+}
+
+.player_form {
+  font-size: 5vh;
+  width: 100vw;
+  height: 100vh;
+}
+.player_form input {
+  color: aliceblue;
 }
 </style>

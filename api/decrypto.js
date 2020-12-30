@@ -74,7 +74,16 @@ app.post('/create_game', (req, res) => {
                 socket.join(msg.game_code);
                 let game = games[msg.game_code];
                 if (game) {
-                    socket.emit('game_data', { game_code: msg.game_code, game_data: team_only_clone(game, msg.team) });
+                    if (msg.team == "idc") {
+                        let nb_players = 9999;
+                        for (let team in game.teams) {
+                            if (game.teams[team].players.length < nb_players) {
+                                msg.team = team;
+                                nb_players = game.teams[team].players.length
+                            }
+                        }
+                    }
+                    socket.emit('game_data', { game_code: msg.game_code, team: msg.team, game_data: team_only_clone(game, msg.team) });
                     msg.player._id = socket.id
                     game.teams[msg.team].players.push(msg.player);
                     io.to(msg.game_code).emit('new_player', { team: msg.team, player: msg.player });

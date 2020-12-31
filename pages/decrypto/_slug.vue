@@ -54,7 +54,7 @@
           v-for="(team, team_name, team_index) in game_data.teams"
           :key="team_index"
         >
-          <div class="team_name">{{ team_name }}</div>
+          <div class="team_name">{{ team_name }} team</div>
           <div
             class="player"
             v-for="(player_obj, player_index) in team.players"
@@ -87,8 +87,50 @@
         </div>
         <input v-model="msg_to_send" placeholder="message..." />
         <button @click="send_msg">Send</button>
+        <button @click="send_test_clue">TEST</button>
       </div>
-      <div class="clue_section">blabla</div>
+      <div class="clue_section">
+        <div class="clue-1">
+          <div class="clue-title">mot mystère 1</div>
+          <div
+            class="clue-text"
+            v-for="(text, index) in clues.white['1']"
+            :key="index"
+          >
+            {{ text }}
+          </div>
+        </div>
+        <div class="clue-2">
+          <div class="clue-title">mot mystère 2</div>
+          <div
+            class="clue-text"
+            v-for="(text, index) in clues.white['2']"
+            :key="index"
+          >
+            {{ text }}
+          </div>
+        </div>
+        <div class="clue-3">
+          <div class="clue-title">mot mystère 3</div>
+          <div
+            class="clue-text"
+            v-for="(text, index) in clues.white['3']"
+            :key="index"
+          >
+            {{ text }}
+          </div>
+        </div>
+        <div class="clue-4">
+          <div class="clue-title">mot mystère 4</div>
+          <div
+            class="clue-text"
+            v-for="(text, index) in clues.white['4']"
+            :key="index"
+          >
+            {{ text }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -109,6 +151,20 @@ export default {
       global_chat: [],
       team_chat: [],
       word_list: [],
+      clues: {
+        white: {
+          1: [],
+          2: [],
+          3: [],
+          4: [],
+        },
+        black: {
+          1: [],
+          2: [],
+          3: [],
+          4: [],
+        },
+      },
     };
   },
   components: { CodenamesCard },
@@ -134,6 +190,11 @@ export default {
       this.global_chat = msg.game_data.chat;
       this.word_list = msg.game_data.teams[this.team].words;
       this.team_chat = msg.game_data.teams[this.team].chat;
+      for (const team in msg.game_data.teams) {
+        for (const clue in msg.game_data.teams[team].clues) {
+          this.add_clue(team, clue);
+        }
+      }
     });
     this.socket.on("new_player", (msg) => {
       console.log("nouveau");
@@ -143,13 +204,15 @@ export default {
     this.socket.on("msg_team", (msg) => this.team_chat.push(msg));
     this.socket.on("player_left", (msg) => {
       let players = this.game_data.teams[msg.team].players;
-      console.log("left", msg.player);
       for (let player_index in players) {
         if (players[player_index].name == msg.player.name) {
           console.log(msg.player.name, " est parti:", msg.reason);
           players.splice(player_index, 1);
         }
       }
+    });
+    this.socket.on("clue_set", (msg) => {
+      this.add_clue(msg.team, msg.clue);
     });
 
     if (this.slug) {
@@ -171,6 +234,22 @@ export default {
       });
       this.msg_to_send = "";
     },
+    add_clue(team, clue) {
+      for (let index in clue.code) {
+        console.log(this.clues[team], clue.code[index]);
+        this.clues[team][clue.code[index]].push(clue.texts[index]);
+      }
+    },
+    send_test_clue() {
+      this.socket.emit("clue_set", {
+        game_code: this.game_code,
+        team: this.team,
+        clue: {
+          code: [4, 2, 1],
+          texts: ["C'est le quatre", "DEUX", "hein?"],
+        },
+      });
+    },
   },
 };
 </script>
@@ -179,6 +258,8 @@ export default {
 .game_page {
   position: relative;
   flex-wrap: wrap;
+  height: 100vh;
+  width: 100vw;
 }
 .word_number_section {
   position: absolute;
@@ -186,11 +267,10 @@ export default {
   left: 0vw;
   display: flex;
   align-items: flex-end;
-  width: 75vw;
+  width: 85vw;
   height: 10vh;
   font-size: 3vh;
   justify-content: space-around;
-  background-color: rgb(124, 88, 230);
 }
 .word_section {
   position: absolute;
@@ -198,10 +278,9 @@ export default {
   left: 0vw;
   display: flex;
   align-items: flex-start;
-  width: 75vw;
+  width: 85vw;
   height: 15vh;
   justify-content: space-evenly;
-  background-color: rgb(124, 88, 252);
 }
 .word {
   width: 18vw;
@@ -212,7 +291,7 @@ export default {
   text-align: center;
   justify-content: center;
   font-size: 3vh;
-
+  font-weight: bold;
   text-transform: uppercase;
 }
 
@@ -221,10 +300,9 @@ export default {
   display: flex;
   flex-direction: column;
   top: 0vh;
-  left: 75vw;
-  width: 25vw;
+  left: 85vw;
+  width: 15vw;
   height: 25vh;
-  background-color: darkblue;
 }
 
 .chat_section {
@@ -233,7 +311,6 @@ export default {
   left: 0px;
   width: 60vw;
   height: 75vh;
-  background-color: cornflowerblue;
 }
 .clue_section {
   position: absolute;
@@ -241,7 +318,35 @@ export default {
   left: 60vw;
   width: 40vw;
   height: 75vh;
-  background-color: rgb(252, 220, 162);
+  display: grid;
+}
+
+.clue-1 {
+  grid-column: 1;
+  grid-row: 1;
+  border: 1px solid #ffffff;
+}
+
+.clue-2 {
+  grid-column: 2;
+  grid-row: 1;
+  border: 1px solid #ffffff;
+}
+.clue-3 {
+  grid-column: 1;
+  grid-row: 2;
+  border: 1px solid #ffffff;
+}
+.clue-4 {
+  grid-column: 2;
+  grid-row: 2;
+  border: 1px solid #ffffff;
+}
+
+.clue-title {
+  font-size: 3vh;
+  text-transform: uppercase;
+  background: rgba(240, 248, 255, 0.205);
 }
 
 .player_form {
@@ -260,10 +365,18 @@ export default {
 
 .team .you {
   font-weight: bold;
+  color: rgb(109, 238, 255);
 }
 
 .team_name {
   font-weight: bold;
+  padding-left: 1vh;
+  font-size: 2.5vh;
   background: rgba(240, 248, 255, 0.205);
+}
+
+.player_name {
+  padding-left: 1vh;
+  font-size: 2.2vh;
 }
 </style>

@@ -96,6 +96,7 @@ app.post('/create_game', (req, res) => {
                     socket.to(player_info.game_code).emit('player_left', player_info)
                 }
             });
+
             socket.on('join_game', msg => {
                 socket.join(msg.game_code);
                 let game = games[msg.game_code];
@@ -144,11 +145,11 @@ app.post('/create_game', (req, res) => {
                     }
                 }
             });
-            socket.on('clues', msg => {
+            socket.on('clue_set', msg => {
                 let game = games[msg.game_code];
                 if (game) {
-                    game.teams[msg.team].clues[game.teams[msg.team].clues.length - 1].texts = msg.texts;
-                    io.to(msg.game_code).emit('clues', { team: msg.team, texts: msg.texts });
+                    game.teams[msg.team].clues.push(msg.clue);
+                    io.to(msg.game_code).emit('clue_set', { team: msg.team, clue: msg.clue });
                 }
 
             });

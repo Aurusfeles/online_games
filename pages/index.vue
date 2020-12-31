@@ -50,7 +50,7 @@ export default {
   width: 30vw;
   font-size: 5vh;
   text-transform: uppercase;
-  background-color: deeppink;
+  background-color: rgb(71, 2, 150);
   border-radius: 1vh;
   padding: 1vh;
 }

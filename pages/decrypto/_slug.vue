@@ -141,6 +141,16 @@ export default {
     });
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     this.socket.on("msg_team", (msg) => this.team_chat.push(msg));
+    this.socket.on("player_left", (msg) => {
+      let players = this.game_data.teams[msg.team].players;
+      console.log("left", msg.player);
+      for (let player_index in players) {
+        if (players[player_index].name == msg.player.name) {
+          console.log(msg.player.name, " est parti:", msg.reason);
+          players.splice(player_index, 1);
+        }
+      }
+    });
 
     if (this.slug) {
       this.game_code_to_join = this.slug;

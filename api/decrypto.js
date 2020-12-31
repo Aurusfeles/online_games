@@ -51,6 +51,23 @@ function clear_ready(game) {
     return true;
 }
 
+function remove_player(socket) {
+    for (const room of socket.rooms) {
+        let game = games[room]
+        if (game) {
+            for (let team in game.teams) {
+                for (let player_index in game.teams[team].players) {
+                    if (game.teams[team].players[player_index]._id == socket.id) {
+                        let player_info = { game_code: room, team: team, player: toolbox.clone(game.teams[team].players[player_index]) }
+                        game.teams[team].players.splice(player_index, 1);
+                        return player_info;
+                    }
+                }
+            }
+        }
+    }
+}
+
 function team_only_clone(game, selected_team) {
     let team_only_clone = toolbox.clone(game);
     for (const team in team_only_clone.teams) {
@@ -70,6 +87,15 @@ app.post('/create_game', (req, res) => {
 
         io.on('connection', function (socket) {
             console.log('Made socket connection');
+            socket.on('disconnecting', reason => {
+                console.log("disconnecting:", reason);
+                let player_info = remove_player(socket);
+                if (player_info) {
+                    player_info.reason = reason;
+                    console.log(player_info);
+                    socket.to(player_info.game_code).emit('player_left', player_info)
+                }
+            });
             socket.on('join_game', msg => {
                 socket.join(msg.game_code);
                 let game = games[msg.game_code];

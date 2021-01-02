@@ -33,21 +33,17 @@
       </div>
     </div>
     <div v-else class="game_page">
-      <div class="word_number_section">
-        <div>1</div>
-        <div>2</div>
-        <div>3</div>
-        <div>4</div>
-      </div>
       <div class="word_section">
         <div
           class="word"
           v-for="(word, word_index) in word_list"
           :key="word_index"
         >
+          <div class="word_number">{{ word_index + 1 }}</div>
           {{ word }}
         </div>
       </div>
+      <div class="action_section"></div>
       <div class="team_section">
         <div
           class="team"
@@ -69,7 +65,7 @@
           </div>
         </div>
       </div>
-      <div class="chat_section">
+      <div v-if="false" class="chat_section">
         <div
           class="chat_box"
           style="height: 100px; overflow: hidden; position: relative"
@@ -90,41 +86,15 @@
         <button @click="send_test_clue">TEST</button>
       </div>
       <div class="clue_section">
-        <div class="clue-1">
-          <div class="clue-title">mot mystère 1</div>
+        <div
+          v-for="(clues_list, clues_list_name) in clues[displayed_clues_team]"
+          :key="clues_list_name"
+          class="clue_column"
+        >
+          <div class="clue_title">mot mystère {{ clues_list_name }}</div>
           <div
-            class="clue-text"
-            v-for="(text, index) in clues.white['1']"
-            :key="index"
-          >
-            {{ text }}
-          </div>
-        </div>
-        <div class="clue-2">
-          <div class="clue-title">mot mystère 2</div>
-          <div
-            class="clue-text"
-            v-for="(text, index) in clues.white['2']"
-            :key="index"
-          >
-            {{ text }}
-          </div>
-        </div>
-        <div class="clue-3">
-          <div class="clue-title">mot mystère 3</div>
-          <div
-            class="clue-text"
-            v-for="(text, index) in clues.white['3']"
-            :key="index"
-          >
-            {{ text }}
-          </div>
-        </div>
-        <div class="clue-4">
-          <div class="clue-title">mot mystère 4</div>
-          <div
-            class="clue-text"
-            v-for="(text, index) in clues.white['4']"
+            class="clue_text"
+            v-for="(text, index) in clues_list"
             :key="index"
           >
             {{ text }}
@@ -140,6 +110,7 @@ import CodenamesCard from "~/components/CodenamesCard";
 export default {
   data() {
     return {
+      displayed_clues_team: "white",
       game_code_to_join: "",
       msg_to_send: "",
       game_messages: "",
@@ -261,38 +232,49 @@ export default {
   height: 100vh;
   width: 100vw;
 }
-.word_number_section {
+.word_section {
   position: absolute;
   top: 0vh;
   left: 0vw;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   width: 85vw;
-  height: 10vh;
-  font-size: 3vh;
-  justify-content: space-around;
-}
-.word_section {
-  position: absolute;
-  top: 10vh;
-  left: 0vw;
-  display: flex;
-  align-items: flex-start;
-  width: 85vw;
-  height: 15vh;
+  height: 20vh;
   justify-content: space-evenly;
 }
+
+.action_section {
+  position: absolute;
+  top: 20vh;
+  left: 0vw;
+  display: flex;
+  align-items: center;
+  width: 85vw;
+  height: 40vh;
+  justify-content: space-evenly;
+  background-color: lawngreen;
+}
+
 .word {
-  width: 18vw;
+  width: 20vw;
   height: 10vh;
   background-color: blue;
   display: flex;
   align-items: center;
   text-align: center;
   justify-content: center;
-  font-size: 3vh;
+  font-size: 3.5vh;
   font-weight: bold;
   text-transform: uppercase;
+  border-radius: 2vh;
+  position: relative;
+}
+
+.word_number {
+  position: absolute;
+  left: 9vw;
+  top: -3vh;
+  font-size: 5vh;
 }
 
 .team_section {
@@ -302,51 +284,39 @@ export default {
   top: 0vh;
   left: 85vw;
   width: 15vw;
-  height: 25vh;
+  height: 100vh;
 }
 
 .chat_section {
   position: absolute;
-  top: 25vh;
+  top: 40vh;
   left: 0px;
-  width: 60vw;
-  height: 75vh;
+  width: 85vw;
+  height: 60vh;
 }
 .clue_section {
   position: absolute;
-  top: 25vh;
-  left: 60vw;
-  width: 40vw;
-  height: 75vh;
-  display: grid;
+  display: flex;
+  top: 60vh;
+  left: 0vw;
+  width: 85vw;
+  height: 40vh;
 }
 
-.clue-1 {
-  grid-column: 1;
-  grid-row: 1;
+.clue_column {
   border: 1px solid #ffffff;
+  flex-grow: 1;
 }
 
-.clue-2 {
-  grid-column: 2;
-  grid-row: 1;
-  border: 1px solid #ffffff;
-}
-.clue-3 {
-  grid-column: 1;
-  grid-row: 2;
-  border: 1px solid #ffffff;
-}
-.clue-4 {
-  grid-column: 2;
-  grid-row: 2;
-  border: 1px solid #ffffff;
-}
-
-.clue-title {
+.clue_title {
   font-size: 3vh;
   text-transform: uppercase;
   background: rgba(240, 248, 255, 0.205);
+}
+
+.clue_text {
+  font-size: 3vh;
+  padding-left: 1vh;
 }
 
 .player_form {
@@ -354,6 +324,7 @@ export default {
   width: 100vw;
   height: 100vh;
 }
+
 .player_form input {
   color: aliceblue;
 }

@@ -43,7 +43,23 @@
           {{ word }}
         </div>
       </div>
-      <div class="action_section"></div>
+      <div class="action_section">
+        <ActionReady
+          v-if="action == 'ready?'"
+          :game_code="game_code"
+          :team="team"
+          :player="player"
+          :socket="socket"
+        />
+        <ActionEnterClues
+          v-if="action == 'enter_clues'"
+          :game_code="game_code"
+          :team="team"
+          :player="player"
+          :socket="socket"
+          :code="code"
+        />
+      </div>
       <div class="team_section">
         <div
           class="team"
@@ -106,10 +122,13 @@
 </template>
 
 <script>
-import CodenamesCard from "~/components/CodenamesCard";
+import ActionReady from "~/components/ActionReady";
+import ActionEnterClues from "~/components/ActionEnterClues";
 export default {
   data() {
     return {
+      action: "ready?",
+      code: [],
       displayed_clues_team: "white",
       game_code_to_join: "",
       msg_to_send: "",
@@ -138,7 +157,7 @@ export default {
       },
     };
   },
-  components: { CodenamesCard },
+  components: { ActionReady, ActionEnterClues },
   computed: {
     ok_to_join() {
       return (
@@ -184,6 +203,11 @@ export default {
     });
     this.socket.on("clue_set", (msg) => {
       this.add_clue(msg.team, msg.clue);
+    });
+    this.socket.on("code", (msg) => {
+      console.log(msg);
+      this.code = msg.code;
+      this.action = "enter_clues";
     });
 
     if (this.slug) {
@@ -239,18 +263,18 @@ export default {
   display: flex;
   align-items: center;
   width: 85vw;
-  height: 20vh;
+  height: 15vh;
   justify-content: space-evenly;
 }
 
 .action_section {
   position: absolute;
-  top: 20vh;
+  top: 15vh;
   left: 0vw;
   display: flex;
   align-items: center;
   width: 85vw;
-  height: 40vh;
+  height: 45vh;
   justify-content: space-evenly;
   background-color: lawngreen;
 }
@@ -349,5 +373,10 @@ export default {
 .player_name {
   padding-left: 1vh;
   font-size: 2.2vh;
+}
+
+.button {
+  background-color: limegreen;
+  color: white;
 }
 </style>

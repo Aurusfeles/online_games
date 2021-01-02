@@ -13,18 +13,22 @@ let server = null
 let io = null
 
 
-function next_player(team) {
+function next_player_socketId(team) {
+    console.log(team)
     team.next_to_play++;
     if (team.next_to_play == team.players.length) {
         team.next_to_play = 0;
     }
-    return team.players[next_to_play]._id;
+    console.log(team.next_to_play);
+    if (team.players[team.next_to_play]) {
+        return team.players[team.next_to_play]._id;
+    }
 }
 
 function get_code_dispatching_list(game) {
     let code_dispatching_list = []
     for (const team in game.teams) {
-        code_dispatching_list.push({ code: generate_code(), socketId: next_player(game.teams[team]) });
+        code_dispatching_list.push({ code: generate_code(), socketId: next_player_socketId(game.teams[team]) });
     }
     return code_dispatching_list;
 }
@@ -77,6 +81,20 @@ function team_only_clone(game, selected_team) {
         }
     }
     return team_only_clone;
+}
+function generate_code() {
+    return toolbox.shuffle([1, 2, 3, 4]).slice(0, 3);
+}
+
+
+function player(team, player_name) {
+    //return the player object in the team with the given player_name
+    for (let player of team.players) {
+        if (player.name == player_name) {
+            return player;
+        }
+    }
+
 }
 
 app.post('/create_game', (req, res) => {
@@ -133,7 +151,7 @@ app.post('/create_game', (req, res) => {
             socket.on('ready', msg => {
                 let game = games[msg.game_code];
                 if (game) {
-                    player(game.team[msg.team], msg.player).ready = true;
+                    player(game.teams[msg.team], msg.player.name).ready = true;
                     if (everyone_ready(game)) {
                         clear_ready(game);
                         // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs

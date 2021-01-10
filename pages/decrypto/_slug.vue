@@ -88,8 +88,9 @@ export default {
       this.add_clue(msg.team, msg.clue);
     });
     this.socket.on("clues_to_guess", (msg) => {
-      this.clues_to_guess = msg;
-      this.action = "clues_to_guess";
+      this.game_data.teams[msg.team].clues.push(msg.clues);
+      this.game_data.current_team = msg.team;
+      this.panels = ["GuessClues", "WordsClues"];
     });
     this.socket.on("code", (msg) => {
       console.log("code");

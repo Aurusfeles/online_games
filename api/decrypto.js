@@ -13,26 +13,14 @@ let server = null
 let io = null
 
 
-function next_player_socketId(team) {
+function next_player(team) {
     console.log(team)
-    team.next_to_play++;
-    if (team.next_to_play == team.players.length) {
-        team.next_to_play = 0;
+    team.current_player++;
+    if (team.current_player == team.players.length) {
+        team.current_player = 0;
     }
-    console.log(team.next_to_play);
-    if (team.players[team.next_to_play]) {
-        return team.players[team.next_to_play]._id;
-    }
+    return team.current_player;
 }
-
-function get_code_dispatching_list(game) {
-    let code_dispatching_list = []
-    for (const team in game.teams) {
-        code_dispatching_list.push(next_player_socketId(game.teams[team]));
-    }
-    return code_dispatching_list;
-}
-
 
 function everyone_ready(game) {
     for (const team in game.teams) {
@@ -163,16 +151,16 @@ app.post('/create_game', (req, res) => {
                     console.log("ready", msg);
                     player(game.teams[msg.team], msg.player.name).ready = true;
                     if (everyone_ready(game)) {
-                        clear_ready(game);
                         // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs
-                        // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)
-                        let code_dispatching_list = get_code_dispatching_list(game);
+                        // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)                        
                         for (const team in game.teams) {
-                            for (const player of game.teams[team].players) {
-                                if (code_dispatching_list.includes(player._id)) {
-                                    io.to(player._id).emit('code', generate_code());
+                            let next_player_index = next_player(game.teams[team]);
+                            for (let i = 0; i <= game.teams[team].players.length; i++) {
+                                if (i == next_player_index) {
+                                    game.teams[team].players[i].ready = false;
+                                    io.to(game.teams[team].players[i]._id).emit('code', generate_code());
                                 } else {
-                                    io.to(player._id).emit('waiting_for_clues', code_dispatching_list);
+                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_clues', next_player_index);
                                 }
                             }
                         }
@@ -182,16 +170,26 @@ app.post('/create_game', (req, res) => {
             socket.on('clue_set', msg => {
                 let game = games[msg.game_code];
                 if (game) {
-                    game.teams[msg.team].clues.push(msg.clue);
-                    io.to(msg.game_code).emit('clue_texts', { team: msg.team, clue_texts: msg.clue.texts });
-                }
-            });
+                    player(game.teams[msg.team], msg.player.name).ready = true;
+                    game.teams[msg.team].current_clues = msg.texts;
+                    game.teams[msg.team].current_code = msg.code;
 
-            socket.on('clue_set', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    game.teams[msg.team].clues.push(msg.clue);
-                    io.to(msg.game_code).emit('clue_set', { team: msg.team, clue: msg.clue });
+                    //A FAIRE: déterminer la prochaine équipe dont on doit deviner les indices
+                    let next_team = 'white';
+
+                    if (everyone_ready(game)) {
+                        for (const team in game.teams) {
+                            for (let i = 0; i <= game.teams[team].players.length; i++) {
+                                if (team == next_team && i == team.current_player) {
+                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_guesses');
+                                } else {
+
+                                    io.to(game.teams[team].players[i]._id).emit('clues_to_guess', { team: next_team, clues: game.teams[next_team].current_clues });
+                                }
+                            }
+                        }
+                    }
+
                 }
             });
 

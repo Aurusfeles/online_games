@@ -1,13 +1,13 @@
 <template>
   <div class="clue_section">
     <div
-      v-for="(clues_list, clues_list_name) in game_data.teams[
+      v-for="(clues_list, clues_list_index) in game_data.teams[
         game_data.current_team
       ].clues"
-      :key="clues_list_name"
+      :key="clues_list_index"
       class="clue_column"
     >
-      <div class="clue_title">mot mystère {{ clues_list_name }}</div>
+      <div class="clue_title">mot mystère {{ clues_list_index }}</div>
       <div class="clue_text" v-for="(text, index) in clues_list" :key="index">
         {{ text }}
       </div>

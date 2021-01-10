@@ -1,6 +1,8 @@
 <template>
   <div>
-    <button :class="{ ready: this.ready }" @click="ready">Ready?</button>
+    <button :class="{ ready: this.ready }" @click="set_ready">
+      {{ text }}
+    </button>
   </div>
 </template>
 
@@ -15,11 +17,14 @@ export default {
   data() {
     return {
       ready: false,
+      text: "Prêt?",
     };
   },
   methods: {
-    ready() {
+    set_ready() {
+      console.log("ready");
       this.ready = true;
+      this.text = "Je suis prêt!";
       this.socket.emit("ready_to_start", {
         game_code: this.game_code,
         team: this.team,

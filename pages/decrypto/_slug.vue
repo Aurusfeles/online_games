@@ -35,7 +35,6 @@ export default {
   data() {
     return {
       panels: ["Join"],
-      game_code_to_join: "",
       game_code: "",
       socket: null,
       game_data: {},
@@ -63,17 +62,12 @@ export default {
       this.$set(this.game_data, "teams", msg);
     });
     this.socket.on("game_data", (msg) => {
+      console.log("game_data");
       this.team = msg.team;
+      this.player = msg.player;
       this.game_code = msg.game_code;
       this.game_data = msg.game_data;
-      this.global_chat = msg.game_data.chat;
-      this.word_list = msg.game_data.teams[this.team].words;
-      this.team_chat = msg.game_data.teams[this.team].chat;
-      for (const team in msg.game_data.teams) {
-        for (const clue in msg.game_data.teams[team].clues) {
-          this.add_clue(team, clue);
-        }
-      }
+      this.panels = ["Words", "ReadyToStart"];
     });
     this.socket.on("new_player", (msg) => {
       console.log("nouveau");
@@ -98,16 +92,15 @@ export default {
       this.action = "clues_to_guess";
     });
     this.socket.on("code", (msg) => {
-      console.log(msg);
-      this.code = msg;
-      this.action = "enter_clues";
+      console.log("code");
+      this.player.code = msg;
+      this.game_data.current_team = this.team;
+      this.panels = ["Words", "EnterClues", "WordsClues"];
     });
 
     if (this.slug) {
-      this.game_code_to_join = this.slug;
-      console.log("ok");
-      console.log(this.socket);
-      this.socket.emit("get_teams", { game_code: this.game_code_to_join });
+      this.game_code = this.slug;
+      this.socket.emit("get_teams", { game_code: this.game_code });
     }
   },
   methods: {
@@ -134,9 +127,10 @@ export default {
   top: 15vh;
   left: 0vw;
   display: flex;
+  flex-direction: column;
   align-items: center;
   width: 85vw;
-  height: 45vh;
+  height: 100vh;
   justify-content: space-evenly;
 }
 

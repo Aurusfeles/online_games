@@ -18,7 +18,7 @@ export default {
   },
   computed: {
     word_list() {
-      return this.game_data.teams[team].words;
+      return this.game_data.teams[this.team].words;
     },
   },
 };

@@ -24,8 +24,8 @@
       </div>
       <label for="game_code_to_join">Game code to join</label>
       <input
-        v-model="game_code_to_join"
-        id="game_code_to_join"
+        v-model="game_code"
+        id="game_code"
         placeholder="enter game code here"
       />
       <button @click="join" :disabled="!ok_to_join">Join</button>
@@ -36,7 +36,7 @@
 <script>
 export default {
   props: {
-    game_code_to_join: String,
+    game_code: String,
     teams: Object,
     socket: Object,
   },
@@ -48,17 +48,13 @@ export default {
   },
   computed: {
     ok_to_join() {
-      return (
-        this.player.name != "" &&
-        this.team != "" &&
-        this.game_code_to_join != ""
-      );
+      return this.player.name != "" && this.team != "" && this.game_code != "";
     },
   },
   methods: {
     join() {
       this.socket.emit("join_game", {
-        game_code: this.game_code_to_join,
+        game_code: this.game_code,
         team: this.team,
         player: this.player,
       });

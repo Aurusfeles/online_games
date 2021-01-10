@@ -1,7 +1,9 @@
 <template>
   <div class="clue_section">
     <div
-      v-for="(clues_list, clues_list_name) in clues[displayed_clues_team]"
+      v-for="(clues_list, clues_list_name) in game_data.teams[
+        game_data.current_team
+      ].clues"
       :key="clues_list_name"
       class="clue_column"
     >
@@ -27,12 +29,7 @@ export default {
 
 <style>
 .clue_section {
-  position: absolute;
   display: flex;
-  top: 60vh;
-  left: 0vw;
-  width: 85vw;
-  height: 40vh;
 }
 
 .clue_column {

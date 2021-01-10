@@ -28,7 +28,7 @@ function next_player_socketId(team) {
 function get_code_dispatching_list(game) {
     let code_dispatching_list = []
     for (const team in game.teams) {
-        code_dispatching_list.push({ code: generate_code(), socketId: next_player_socketId(game.teams[team]) });
+        code_dispatching_list.push(next_player_socketId(game.teams[team]));
     }
     return code_dispatching_list;
 }
@@ -83,7 +83,7 @@ function team_only_clone(game, selected_team) {
     return team_only_clone;
 }
 function generate_code() {
-    return toolbox.shuffle([1, 2, 3, 4]).slice(0, 3);
+    return toolbox.shuffle([0, 1, 2, 3]).slice(0, 3);
 }
 
 
@@ -124,6 +124,7 @@ app.post('/create_game', (req, res) => {
 
             socket.on('join_game', msg => {
                 socket.join(msg.game_code);
+                console.log("join");
                 let game = games[msg.game_code];
                 if (game) {
                     if (msg.team == "idc") {
@@ -135,7 +136,8 @@ app.post('/create_game', (req, res) => {
                             }
                         }
                     }
-                    socket.emit('game_data', { game_code: msg.game_code, team: msg.team, game_data: team_only_clone(game, msg.team) });
+                    console.log("join_emit");
+                    socket.emit('game_data', { game_code: msg.game_code, team: msg.team, player: msg.player, game_data: team_only_clone(game, msg.team) });
                     msg.player._id = socket.id
                     game.teams[msg.team].players.push(msg.player);
                     io.to(msg.game_code).emit('new_player', { team: msg.team, player: msg.player });
@@ -155,17 +157,24 @@ app.post('/create_game', (req, res) => {
                     io.to(msg.game_code).emit('msg_team', { team: msg.team, msg: msg.msg });
                 }
             });
-            socket.on('ready', msg => {
+            socket.on('ready_to_start', msg => {
                 let game = games[msg.game_code];
                 if (game) {
+                    console.log("ready", msg);
                     player(game.teams[msg.team], msg.player.name).ready = true;
                     if (everyone_ready(game)) {
                         clear_ready(game);
                         // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs
                         // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)
                         let code_dispatching_list = get_code_dispatching_list(game);
-                        for (clue_set of code_dispatching_list) {
-                            io.to(clue_set.socketId).emit('code', clue_set.code);
+                        for (const team in game.teams) {
+                            for (const player of game.teams[team].players) {
+                                if (code_dispatching_list.includes(player._id)) {
+                                    io.to(player._id).emit('code', generate_code());
+                                } else {
+                                    io.to(player._id).emit('waiting_for_clues', code_dispatching_list);
+                                }
+                            }
                         }
                     }
                 }

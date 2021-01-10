@@ -1,178 +1,67 @@
 <template>
-  <div>
-    <div v-if="game_code == ''">
-      <div class="player_form">
-        <div class="name">
-          <label for="name">Your name: </label>
-          <input
-            v-model="player.name"
-            placeholder="enter your name here"
-            label="name"
-            id="name"
-            outlined
-          />
-        </div>
-
-        <div class="team">
-          <input type="radio" id="white" value="white" v-model="team" />
-          <label for="guess">White team!</label>
-          <br />
-          <input type="radio" id="black" value="black" v-model="team" />
-          <label for="black">Black team!</label>
-          <br />
-          <input type="radio" id="idc" value="idc" v-model="team" />
-          <label for="black">I don't care!</label>
-        </div>
-        <label for="game_code_to_join">Game code to join</label>
-        <input
-          v-model="game_code_to_join"
-          id="game_code_to_join"
-          placeholder="enter game code here"
-        />
-        <button @click="join" :disabled="!ok_to_join">Join</button>
-      </div>
-    </div>
-    <div v-else class="game_page">
-      <div class="word_section">
-        <div
-          class="word"
-          v-for="(word, word_index) in word_list"
-          :key="word_index"
-        >
-          <div class="word_number">{{ word_index + 1 }}</div>
-          {{ word }}
-        </div>
-      </div>
-      <div class="action_section">
-        <ActionReady
-          v-if="action == 'ready?'"
-          :game_code="game_code"
-          :team="team"
-          :player="player"
-          :socket="socket"
-        />
-        <ActionEnterClues
-          v-if="action == 'enter_clues'"
-          :game_code="game_code"
-          :team="team"
-          :player="player"
-          :socket="socket"
-          :code="code"
-        />
-      </div>
-      <div class="team_section">
-        <div
-          class="team"
-          v-for="(team, team_name, team_index) in game_data.teams"
-          :key="team_index"
-        >
-          <div class="team_name">{{ team_name }} team</div>
-          <div
-            class="player"
-            v-for="(player_obj, player_index) in team.players"
-            :key="player_index"
-          >
-            <div
-              class="player_name"
-              :class="{ you: player_obj.name == player.name }"
-            >
-              {{ player_obj.name }}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div v-if="false" class="chat_section">
-        <div
-          class="chat_box"
-          style="height: 100px; overflow: hidden; position: relative"
-        >
-          <div class="floating_div" style="position: absolute; bottom: 0">
-            <span
-              v-for="(message, message_key) in global_chat"
-              :key="message_key"
-            >
-              <span class="message_player_name">{{ message.player.name }}</span
-              >:<span class="message">{{ message.text }}</span
-              ><br />
-            </span>
-          </div>
-        </div>
-        <input v-model="msg_to_send" placeholder="message..." />
-        <button @click="send_msg">Send</button>
-        <button @click="send_test_clue">TEST</button>
-      </div>
-      <div class="clue_section">
-        <div
-          v-for="(clues_list, clues_list_name) in clues[displayed_clues_team]"
-          :key="clues_list_name"
-          class="clue_column"
-        >
-          <div class="clue_title">mot mystère {{ clues_list_name }}</div>
-          <div
-            class="clue_text"
-            v-for="(text, index) in clues_list"
-            :key="index"
-          >
-            {{ text }}
-          </div>
-        </div>
-      </div>
+  <div class="game_page">
+    <Teams
+      :game_code="game_code"
+      :socket="socket"
+      :game_data="game_data"
+      :player="player"
+      :team="team"
+    />
+    <div class="panel_section">
+      <div
+        v-for="(panel, panel_index) in panels"
+        :key="panel_index"
+        :is="panel"
+        :game_code="game_code"
+        :socket="socket"
+        :game_data="game_data"
+        :player="player"
+        :team="team"
+      ></div>
     </div>
   </div>
 </template>
 
 <script>
-import ActionReady from "~/components/ActionReady";
-import ActionEnterClues from "~/components/ActionEnterClues";
+import ReadyToStart from "~/components/ReadyToStart";
+import Words from "~/components/Words";
+import WordsClues from "~/components/WordsClues";
+import EnterClues from "~/components/EnterClues";
+import Chat from "~/components/Chat";
+import Teams from "~/components/Teams";
+import Join from "~/components/Join";
+
 export default {
   data() {
     return {
-      action: "ready?",
-      code: [],
-      displayed_clues_team: "white",
+      panels: ["Join"],
       game_code_to_join: "",
-      msg_to_send: "",
-      game_messages: "",
       game_code: "",
       socket: null,
       game_data: {},
       player: { name: "" },
       team: "idc",
-      global_chat: [],
-      team_chat: [],
-      word_list: [],
-      clues: {
-        white: {
-          1: [],
-          2: [],
-          3: [],
-          4: [],
-        },
-        black: {
-          1: [],
-          2: [],
-          3: [],
-          4: [],
-        },
-      },
     };
   },
-  components: { ActionReady, ActionEnterClues },
-  computed: {
-    ok_to_join() {
-      return (
-        this.player.name != "" &&
-        this.team != "" &&
-        this.game_code_to_join != ""
-      );
-    },
+  components: {
+    Join,
+    Teams,
+    Chat,
+    ReadyToStart,
+    EnterClues,
+    Words,
+    WordsClues,
   },
+  computed: {},
   async asyncData({ params }) {
     const slug = params.slug; // When calling /abc the slug will be "abc"
     return { slug };
   },
   mounted() {
     this.socket = io();
+    this.socket.on("teams", (msg) => {
+      this.$set(this.game_data, "teams", msg);
+    });
     this.socket.on("game_data", (msg) => {
       this.team = msg.team;
       this.game_code = msg.game_code;
@@ -204,46 +93,29 @@ export default {
     this.socket.on("clue_set", (msg) => {
       this.add_clue(msg.team, msg.clue);
     });
+    this.socket.on("clues_to_guess", (msg) => {
+      this.clues_to_guess = msg;
+      this.action = "clues_to_guess";
+    });
     this.socket.on("code", (msg) => {
       console.log(msg);
-      this.code = msg.code;
+      this.code = msg;
       this.action = "enter_clues";
     });
 
     if (this.slug) {
       this.game_code_to_join = this.slug;
+      console.log("ok");
+      console.log(this.socket);
+      this.socket.emit("get_teams", { game_code: this.game_code_to_join });
     }
   },
   methods: {
-    join() {
-      this.socket.emit("join_game", {
-        game_code: this.game_code_to_join,
-        team: this.team,
-        player: this.player,
-      });
-    },
-    send_msg() {
-      this.socket.emit("msg_global", {
-        game_code: this.game_code,
-        msg: { text: this.msg_to_send, player: this.player },
-      });
-      this.msg_to_send = "";
-    },
     add_clue(team, clue) {
       for (let index in clue.code) {
         console.log(this.clues[team], clue.code[index]);
         this.clues[team][clue.code[index]].push(clue.texts[index]);
       }
-    },
-    send_test_clue() {
-      this.socket.emit("clue_set", {
-        game_code: this.game_code,
-        team: this.team,
-        clue: {
-          code: [4, 2, 1],
-          texts: ["C'est le quatre", "DEUX", "hein?"],
-        },
-      });
     },
   },
 };
@@ -256,18 +128,8 @@ export default {
   height: 100vh;
   width: 100vw;
 }
-.word_section {
-  position: absolute;
-  top: 0vh;
-  left: 0vw;
-  display: flex;
-  align-items: center;
-  width: 85vw;
-  height: 15vh;
-  justify-content: space-evenly;
-}
 
-.action_section {
+.panel_section {
   position: absolute;
   top: 15vh;
   left: 0vw;
@@ -276,71 +138,6 @@ export default {
   width: 85vw;
   height: 45vh;
   justify-content: space-evenly;
-  background-color: lawngreen;
-}
-
-.word {
-  width: 20vw;
-  height: 10vh;
-  background-color: blue;
-  display: flex;
-  align-items: center;
-  text-align: center;
-  justify-content: center;
-  font-size: 3.5vh;
-  font-weight: bold;
-  text-transform: uppercase;
-  border-radius: 2vh;
-  position: relative;
-}
-
-.word_number {
-  position: absolute;
-  left: 9vw;
-  top: -3vh;
-  font-size: 5vh;
-}
-
-.team_section {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  top: 0vh;
-  left: 85vw;
-  width: 15vw;
-  height: 100vh;
-}
-
-.chat_section {
-  position: absolute;
-  top: 40vh;
-  left: 0px;
-  width: 85vw;
-  height: 60vh;
-}
-.clue_section {
-  position: absolute;
-  display: flex;
-  top: 60vh;
-  left: 0vw;
-  width: 85vw;
-  height: 40vh;
-}
-
-.clue_column {
-  border: 1px solid #ffffff;
-  flex-grow: 1;
-}
-
-.clue_title {
-  font-size: 3vh;
-  text-transform: uppercase;
-  background: rgba(240, 248, 255, 0.205);
-}
-
-.clue_text {
-  font-size: 3vh;
-  padding-left: 1vh;
 }
 
 .player_form {
@@ -351,28 +148,6 @@ export default {
 
 .player_form input {
   color: aliceblue;
-}
-
-.team {
-  border: 1px solid #ffffff;
-  flex-grow: 1;
-}
-
-.team .you {
-  font-weight: bold;
-  color: rgb(109, 238, 255);
-}
-
-.team_name {
-  font-weight: bold;
-  padding-left: 1vh;
-  font-size: 2.5vh;
-  background: rgba(240, 248, 255, 0.205);
-}
-
-.player_name {
-  padding-left: 1vh;
-  font-size: 2.2vh;
 }
 
 .button {

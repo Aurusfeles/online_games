@@ -2,7 +2,7 @@ const bodyParser = require('body-parser')
 const app = require('express')()
 const socket = require('socket.io')
 
-const toolbox = require('./toolbox.js')
+const toolbox = require('../assets/js/toolbox')
 
 app.use(bodyParser.json());
 
@@ -103,6 +103,37 @@ app.post('/create_game', (req, res) => {
                 }
             });
 
+            this.socket.on("change_data", (msg) => {
+                let game = games[msg.game_code];
+                if (game) {
+                    let obj = toolbox.resolve_path(game, msg.path);
+                    if (obj) {
+                        this.$set(obj, msg.key, msg.new_value);
+                    }
+                }
+            });
+
+            this.socket.on("add_element", (msg) => {
+                let game = games[msg.game_code];
+                if (game) {
+                    let obj = toolbox.resolve_path(game, msg.path);
+                    if (obj) {
+                        obj.push(msg.new_element);
+                    }
+                }
+            });
+
+            this.socket.on("delete_element", (msg) => {
+                let game = games[msg.game_code];
+                if (game) {
+                    let obj = toolbox.resolve_path(game, msg.path);
+                    if (obj) {
+                        obj.splice(msg.element_index, 1);
+                    }
+                }
+            });
+
+
             socket.on('get_teams', msg => {
                 let game = games[msg.game_code];
                 if (game) {
@@ -155,12 +186,13 @@ app.post('/create_game', (req, res) => {
                         // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)                        
                         for (const team in game.teams) {
                             let next_player_index = next_player(game.teams[team]);
-                            for (let i = 0; i <= game.teams[team].players.length; i++) {
+                            console.log("next", next_player_index);
+                            for (let i = 0; i < game.teams[team].players.length; i++) {
                                 if (i == next_player_index) {
                                     game.teams[team].players[i].ready = false;
                                     io.to(game.teams[team].players[i]._id).emit('code', generate_code());
                                 } else {
-                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_clues', next_player_index);
+                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_player', next_player_index);
                                 }
                             }
                         }
@@ -179,11 +211,12 @@ app.post('/create_game', (req, res) => {
 
                     if (everyone_ready(game)) {
                         for (const team in game.teams) {
-                            for (let i = 0; i <= game.teams[team].players.length; i++) {
-                                if (team == next_team && i == team.current_player) {
+                            for (let i = 0; i < game.teams[team].players.length; i++) {
+                                if (team == next_team && i == game.teams[team].current_player) {
+                                    game.teams[team].players[i].ready = true;
                                     io.to(game.teams[team].players[i]._id).emit('waiting_for_guesses');
                                 } else {
-
+                                    game.teams[team].players[i].ready = false;
                                     io.to(game.teams[team].players[i]._id).emit('clues_to_guess', { team: next_team, clues: game.teams[next_team].current_clues });
                                 }
                             }
@@ -209,7 +242,7 @@ app.post('/create_game', (req, res) => {
                 bad_tokens: 0,
                 players: [],
                 chat: [],
-                next_to_play: -1
+                current_player: -1
             },
             black: {
                 words: word_list.slice(4, 8),
@@ -218,7 +251,7 @@ app.post('/create_game', (req, res) => {
                 bad_tokens: 0,
                 players: [],
                 chat: [],
-                next_to_play: -1
+                current_player: -1
             }
         },
         chat: []

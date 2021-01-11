@@ -7,7 +7,7 @@
       :key="clues_list_index"
       class="clue_column"
     >
-      <div class="clue_title">mot mystère {{ clues_list_index }}</div>
+      <div class="clue_title">{{ word(clues_list_index) }}</div>
       <div class="clue_text" v-for="(text, index) in clues_list" :key="index">
         {{ text }}
       </div>
@@ -23,6 +23,15 @@ export default {
     socket: Object,
     player: Object,
     team: String,
+  },
+  methods: {
+    word(index) {
+      if (this.game_data.current_team == this.team) {
+        return this.game_data.teams[this.team].words[index];
+      } else {
+        return "Mot mystère " + index + 1;
+      }
+    },
   },
 };
 </script>

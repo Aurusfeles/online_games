@@ -34,6 +34,16 @@ const code_chars = [
     "9",
 ]
 
+export function resolve_path(object, path, defaultValue = undefined) {
+    if (!path) {
+        return {};
+    }
+    return path
+        .split(/[\.\[\]\'\"]/)
+        .filter(p => p)
+        .reduce((o, p) => (o ? o[p] : defaultValue), object);
+}
+
 export function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }

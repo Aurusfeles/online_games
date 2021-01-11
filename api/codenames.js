@@ -2,7 +2,7 @@ const bodyParser = require('body-parser')
 const app = require('express')()
 const socket = require('socket.io')
 
-const toolbox = require('./toolbox.js')
+const toolbox = require('../assets/js/toolbox.js')
 
 app.use(bodyParser.json());
 

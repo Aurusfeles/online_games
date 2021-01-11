@@ -22,14 +22,15 @@ export default {
   },
   methods: {
     set_ready() {
-      console.log("ready");
-      this.ready = true;
-      this.text = "Je suis prêt!";
-      this.socket.emit("ready_to_start", {
-        game_code: this.game_code,
-        team: this.team,
-        player: this.player,
-      });
+      if (!this.ready) {
+        this.ready = true;
+        this.text = "Je suis prêt!";
+        this.socket.emit("ready_to_start", {
+          game_code: this.game_code,
+          team: this.team,
+          player: this.player,
+        });
+      }
     },
   },
 };

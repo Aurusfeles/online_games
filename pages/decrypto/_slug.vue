@@ -30,6 +30,11 @@ import EnterClues from "~/components/EnterClues";
 import Chat from "~/components/Chat";
 import Teams from "~/components/Teams";
 import Join from "~/components/Join";
+import WaitingForPlayer from "~/components/WaitingForPlayer";
+import WaitingForGuesses from "~/components/WaitingForGuesses";
+import GuessClues from "~/components/GuessClues";
+
+const toolbox = require("~/assets/js/toolbox.js");
 
 export default {
   data() {
@@ -50,6 +55,9 @@ export default {
     EnterClues,
     Words,
     WordsClues,
+    GuessClues,
+    WaitingForPlayer,
+    WaitingForGuesses,
   },
   computed: {},
   async asyncData({ params }) {
@@ -69,9 +77,38 @@ export default {
       this.game_data = msg.game_data;
       this.panels = ["Words", "ReadyToStart"];
     });
+
+    this.socket.on("change_data", (msg) => {
+      let obj = toolbox.resolve_path(game_data, msg.path);
+      if (obj) {
+        this.$set(obj, msg.key, msg.new_value);
+      }
+    });
+
+    this.socket.on("add_element", (msg) => {
+      let obj = toolbox.resolve_path(game_data, msg.path);
+      if (obj) {
+        obj.push(msg.new_element);
+      }
+    });
+
+    this.socket.on("delete_element", (msg) => {
+      let obj = toolbox.resolve_path(game_data, msg.path);
+      if (obj) {
+        obj.splice(msg.element_index, 1);
+      }
+    });
+
     this.socket.on("new_player", (msg) => {
       console.log("nouveau");
       this.game_data.teams[msg.team].players.push(msg.player);
+    });
+    this.socket.on("waiting_for_player", (msg) => {
+      this.game_data.teams[this.team].current_player = msg;
+      this.panels = ["Words", "WaitingForPlayer"];
+    });
+    this.socket.on("waiting_for_guesses", (msg) => {
+      this.panels = ["Words", "WaitingForGuesses"];
     });
     this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
     this.socket.on("msg_team", (msg) => this.team_chat.push(msg));
@@ -88,8 +125,8 @@ export default {
       this.add_clue(msg.team, msg.clue);
     });
     this.socket.on("clues_to_guess", (msg) => {
-      this.game_data.teams[msg.team].clues.push(msg.clues);
       this.game_data.current_team = msg.team;
+      this.game_data.teams[msg.team].current_clues = msg.clues;
       this.panels = ["GuessClues", "WordsClues"];
     });
     this.socket.on("code", (msg) => {

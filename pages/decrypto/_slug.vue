@@ -1,22 +1,24 @@
 <template>
   <div class="game_page">
     <Teams
-      :game_code="game_code"
       :socket="socket"
       :game_data="game_data"
-      :player="player"
-      :team="team"
+      :personal_data="personal_data"
+    />
+    <Join
+      v-if="personal_data == {}"
+      :socket="socket"
+      :game_data="game_data"
+      :game_code_to_join="game_code_to_join"
     />
     <div class="panel_section">
       <div
         v-for="(panel, panel_index) in panels"
         :key="panel_index"
         :is="panel"
-        :game_code="game_code"
         :socket="socket"
         :game_data="game_data"
-        :player="player"
-        :team="team"
+        :personal_data="personal_data"
       ></div>
     </div>
   </div>
@@ -39,12 +41,13 @@ const toolbox = require("~/assets/js/toolbox.js");
 export default {
   data() {
     return {
-      panels: ["Join"],
-      game_code: "",
+      panels: [],
       socket: null,
       game_data: {},
-      player: { name: "" },
-      team: "idc",
+      personal_data: {
+        player_index: -1,
+        team: "idc",
+      },
     };
   },
   components: {
@@ -66,22 +69,17 @@ export default {
   },
   mounted() {
     this.socket = io();
-    this.socket.on("teams", (msg) => {
-      this.$set(this.game_data, "teams", msg);
-    });
-    this.socket.on("game_data", (msg) => {
-      console.log("game_data");
-      this.team = msg.team;
-      this.player = msg.player;
-      this.game_code = msg.game_code;
-      this.game_data = msg.game_data;
-      this.panels = ["Words", "ReadyToStart"];
+
+    this.socket.on("game_data", (msg) => (this.game_data = msg));
+    this.socket.on("personal_data", (msg) => {
+      this.personal_data = msg;
     });
 
     this.socket.on("change_data", (msg) => {
       let obj = toolbox.resolve_path(game_data, msg.path);
       if (obj) {
         this.$set(obj, msg.key, msg.new_value);
+        check_state();
       }
     });
 
@@ -89,6 +87,7 @@ export default {
       let obj = toolbox.resolve_path(game_data, msg.path);
       if (obj) {
         obj.push(msg.new_element);
+        check_state();
       }
     });
 
@@ -96,56 +95,36 @@ export default {
       let obj = toolbox.resolve_path(game_data, msg.path);
       if (obj) {
         obj.splice(msg.element_index, 1);
+        check_state();
       }
     });
 
-    this.socket.on("new_player", (msg) => {
-      console.log("nouveau");
-      this.game_data.teams[msg.team].players.push(msg.player);
-    });
-    this.socket.on("waiting_for_player", (msg) => {
-      this.game_data.teams[this.team].current_player = msg;
-      this.panels = ["Words", "WaitingForPlayer"];
-    });
-    this.socket.on("waiting_for_guesses", (msg) => {
-      this.panels = ["Words", "WaitingForGuesses"];
-    });
-    this.socket.on("msg_global", (msg) => this.global_chat.push(msg));
-    this.socket.on("msg_team", (msg) => this.team_chat.push(msg));
-    this.socket.on("player_left", (msg) => {
-      let players = this.game_data.teams[msg.team].players;
-      for (let player_index in players) {
-        if (players[player_index].name == msg.player.name) {
-          console.log(msg.player.name, " est parti:", msg.reason);
-          players.splice(player_index, 1);
-        }
-      }
-    });
-    this.socket.on("clue_set", (msg) => {
-      this.add_clue(msg.team, msg.clue);
-    });
-    this.socket.on("clues_to_guess", (msg) => {
-      this.game_data.current_team = msg.team;
-      this.game_data.teams[msg.team].current_clues = msg.clues;
-      this.panels = ["GuessClues", "WordsClues"];
-    });
     this.socket.on("code", (msg) => {
       console.log("code");
-      this.player.code = msg;
-      this.game_data.current_team = this.team;
-      this.panels = ["Words", "EnterClues", "WordsClues"];
+      this.personal_data.code = msg;
     });
 
     if (this.slug) {
-      this.game_code = this.slug;
-      this.socket.emit("get_teams", { game_code: this.game_code });
+      this.game_code_to_join = this.slug;
+      this.socket.emit("game_data", { game_code: this.game_code_to_join });
     }
   },
   methods: {
-    add_clue(team, clue) {
-      for (let index in clue.code) {
-        console.log(this.clues[team], clue.code[index]);
-        this.clues[team][clue.code[index]].push(clue.texts[index]);
+    check_state() {
+      switch (this.game_data.state) {
+        case "start":
+          this.panels = ["Words", "ReadyToStart"];
+          break;
+        case "first_clues_making":
+        case "clues_making":
+          if (
+            this.game_data.teams[this.team].current_player_index ==
+            this.player_index
+          ) {
+            this.panels = ["Words", "EnterClues", "WordsClues"];
+          } else {
+            this.panels = ["Words", "WaitingForPlayer", "WordsClues"];
+          }
       }
     },
   },

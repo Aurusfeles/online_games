@@ -2,10 +2,12 @@
   <div>
     <div>
       Votre code est
-      <span v-for="number in player.code" :key="number">{{ number + 1 }} </span>
+      <span v-for="number in personal_data.code" :key="number"
+        >{{ number + 1 }}
+      </span>
     </div>
     <div v-for="number in player.code" :key="number">
-      Pour le mot {{ game_data.teams[team].words[number] }}:<input
+      Pour le mot {{ personal_data.word_list[number] }}({{ number }}):<input
         v-model="texts[number]"
       />
     </div>
@@ -20,20 +22,18 @@ export default {
     };
   },
   props: {
-    game_code: String,
     game_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
+    personal_data: Object,
   },
   methods: {
     send_clues() {
       this.socket.emit("clue_set", {
         game_code: this.game_code,
-        player: this.player,
-        team: this.team,
+        player_index: this.personal_data.player_index,
+        team: this.personal_data.team,
         clue: {
-          code: this.player.code,
+          code: this.personal_data.code,
           texts: this.texts,
         },
       });

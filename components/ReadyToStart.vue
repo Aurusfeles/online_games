@@ -9,10 +9,9 @@
 <script>
 export default {
   props: {
-    game_code: String,
+    game_data: Object,
+    personal_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
   },
   data() {
     return {
@@ -25,10 +24,15 @@ export default {
       if (!this.ready) {
         this.ready = true;
         this.text = "Je suis prêt!";
-        this.socket.emit("ready_to_start", {
-          game_code: this.game_code,
-          team: this.team,
-          player: this.player,
+        this.socket.emit("change_data", {
+          game_code: this.game_data.game_code,
+          path:
+            ".teams." +
+            this.personal_data.team +
+            ".players." +
+            this.personal_data.player_index,
+          key: "ready",
+          new_value: true,
         });
       }
     },

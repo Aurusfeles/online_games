@@ -13,9 +13,7 @@
         </option>
       </select>
     </div>
-    <button @click="ready = true" :class="{ ready: this.ready }">
-      Je suis sûr!
-    </button>
+    <button @click="click" :class="{ ready: this.ready }">Je suis sûr!</button>
   </div>
 </template>
 <script>
@@ -27,16 +25,14 @@ export default {
     };
   },
   props: {
-    game_code: String,
     game_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
+    personal_data: Object,
   },
   computed: {
     word_list() {
       if (this.game_data.current_team == this.team) {
-        return this.game_data.teams[this.team].words;
+        return this.personal_data.word_list;
       } else {
         return [
           "Mot mystère 1",
@@ -51,13 +47,20 @@ export default {
     },
   },
   methods: {
+    click() {
+      this.ready = true;
+      this.send_guess();
+    },
     send_guess() {
-      this.socket.emit("clue_guess", {
-        game_code: this.game_code,
-        player: this.player,
-        team: this.team,
-        code: this.reply,
-        ready: this.ready,
+      this.socket.emit("change_data", {
+        game_code: this.game_data.game_code,
+        path:
+          ".teams." +
+          this.personal_data.team +
+          ".players." +
+          this.personal_data.player_index,
+        key: "code",
+        value: this.reply,
       });
     },
   },

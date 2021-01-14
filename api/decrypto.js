@@ -13,13 +13,12 @@ let server = null
 let io = null
 
 
-function next_player(team) {
+function get_next_player_index(team) {
     console.log(team)
-    team.current_player++;
-    if (team.current_player == team.players.length) {
-        team.current_player = 0;
+    if (team.current_player == team.players.length - 1) {
+        return 0;
     }
-    return team.current_player;
+    return team.current_player + 1;
 }
 
 function everyone_ready(game) {
@@ -85,6 +84,100 @@ function player(team, player_name) {
 
 }
 
+function change_data_for_all(io, game, path, key, new_value) {
+    let obj = toolbox.resolve_path(game, msg.path);
+    if (obj) {
+        this.$set(obj, key, new_value);
+        io.to(game.code).emit('change_data', { path: path, key: key, new_value: new_value });
+        return true;
+    }
+    return false;
+}
+
+function add_element_for_all(io, game, path, new_element) {
+    let obj = toolbox.resolve_path(game, path);
+    if (obj) {
+        obj.push(new_element);
+        io.to(game.code).emit('add_element', { path: path, element: new_element });
+        return true;
+    }
+    return false;
+}
+
+function delete_element_for_all(io, game, path, element_index) {
+    let obj = toolbox.resolve_path(game, path);
+    if (obj) {
+        obj.splice(element_index, 1);
+        io.to(game.code).emit('delete_element', { path: path, element: element_index });
+        return true;
+    }
+    return false;
+}
+
+
+
+function check_state(game) {
+    switch (game.state) {
+        case "start":
+            if (everyone_ready(game)) {
+                // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs                
+                // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)                        
+                change_data_for_all(io, game, ".", "state", "first_clues_making");
+                for (const team in game.teams) {
+                    let next = get_next_player_index(game.teams[team]);
+                    change_data_for_all(io, game, ".teams." + team, "current_player", next);
+                    change_data_for_all(io, game, ".teams." + team + ".players[" + next + "]", "ready", false);
+                    io.to(game.teams[team].players[next]._id).emit('code', generate_code());
+                }
+            }
+            break;
+        case "first_clues_making":
+            if (everyone_ready(game)) {
+                clear_ready(game);
+                for (const team in game.teams) {
+                    let current_player_index = game.teams[team].current_player_index;
+                    change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", true);
+                }
+                change_data_for_all(io, game, ".", "state", "first_clues_guessing");
+            }
+            break;
+        case "first_clues_guessing":
+            if (everyone_ready(game)) {
+                change_data_for_all(io, game, ".", "state", "first_results");
+                process_guesses(game);  // A faire!! ode is revealed, clues are put in correct table columns, score is update
+            }
+            break;
+
+        case "results":
+        case "first_results":
+            if (everyone_ready(game)) {
+                change_data_for_all(io, game, ".", "state", "clues_making");
+                for (const team in game.teams) {
+                    let next = get_next_player_index(game.teams[team]);
+                    change_data_for_all(io, game, ".teams." + team, "current_player", next);
+                    change_data_for_all(io, game, ".teams." + team + ".players[" + next + "]", "ready", false);
+                    io.to(game.teams[team].players[next]._id).emit('code', generate_code());
+                }
+            }
+            break;
+        case "clues_making":
+            if (everyone_ready(game)) {
+                clear_ready(game);
+                change_data_for_all(io, game, ".", "state", "clues_guessing");
+                let next_team = get_next_team(game);
+                if (every_team_played(game)) {
+                    change_data_for_all(io, game, ".", "state", "results");
+                }
+                else {
+                    let current_player = game.teams[next_team].current_player;
+                    change_data_for_all(io, game, ".teams." + team + ".players[" + current_player + "]", "ready", true);
+                    change_data_for_all(io, game, ".", "current_team", next_team);
+                }
+            }
+            break;
+    }
+}
+
 app.post('/create_game', (req, res) => {
     // Création du serveur, et gestion des différents messages
     if (!server) {
@@ -103,102 +196,66 @@ app.post('/create_game', (req, res) => {
                 }
             });
 
-            this.socket.on("change_data", (msg) => {
+            socket.on("game_data", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
-                    let obj = toolbox.resolve_path(game, msg.path);
-                    if (obj) {
-                        this.$set(obj, msg.key, msg.new_value);
+                    socket.emit('game_data', game.open_data);
+                }
+            });
+
+            socket.on("change_data", (msg) => {
+                let game = games[msg.game_code];
+                if (game) {
+                    if (change_data_for_all(io, game.open_data, msg.path, msg.key, msg.new_value)) {
+                        check_state(game.open_data);
                     }
                 }
             });
 
-            this.socket.on("add_element", (msg) => {
+            socket.on("add_element", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
-                    let obj = toolbox.resolve_path(game, msg.path);
-                    if (obj) {
-                        obj.push(msg.new_element);
+                    if (add_element_for_all(io, game.open_data, msg.path, msg.new_element)) {
+                        check_state(game.open_data);
                     }
                 }
             });
 
-            this.socket.on("delete_element", (msg) => {
+            socket.on("delete_element", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
-                    let obj = toolbox.resolve_path(game, msg.path);
-                    if (obj) {
-                        obj.splice(msg.element_index, 1);
+                    if (delete_element_for_all(io, game.open_data, msg.path, msg.element_index)) {
+                        check_state(game.open_data);
                     }
                 }
             });
-
-
-            socket.on('get_teams', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    socket.emit('teams', game.teams);
-                }
-            })
 
             socket.on('join_game', msg => {
                 socket.join(msg.game_code);
                 console.log("join");
                 let game = games[msg.game_code];
+                let personal_data = { player: msg.player }
                 if (game) {
                     if (msg.team == "idc") {
                         let nb_players = 9999;
                         for (let team in game.teams) {
                             if (game.teams[team].players.length < nb_players) {
-                                msg.team = team;
+                                personal_data.team = team;
                                 nb_players = game.teams[team].players.length
                             }
                         }
                     }
-                    console.log("join_emit");
-                    socket.emit('game_data', { game_code: msg.game_code, team: msg.team, player: msg.player, game_data: team_only_clone(game, msg.team) });
-                    msg.player._id = socket.id
-                    game.teams[msg.team].players.push(msg.player);
-                    io.to(msg.game_code).emit('new_player', { team: msg.team, player: msg.player });
-                }
-            });
-            socket.on('msg_global', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    game.chat.push(msg.msg);
-                    io.to(msg.game_code).emit('msg_global', msg.msg);
-                }
-            });
-            socket.on('msg_team', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    game.team[msg.team].chat.push(msg.msg);
-                    io.to(msg.game_code).emit('msg_team', { team: msg.team, msg: msg.msg });
-                }
-            });
-            socket.on('ready_to_start', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    console.log("ready", msg);
-                    player(game.teams[msg.team], msg.player.name).ready = true;
-                    if (everyone_ready(game)) {
-                        // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs
-                        // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)                        
-                        for (const team in game.teams) {
-                            let next_player_index = next_player(game.teams[team]);
-                            console.log("next", next_player_index);
-                            for (let i = 0; i < game.teams[team].players.length; i++) {
-                                if (i == next_player_index) {
-                                    game.teams[team].players[i].ready = false;
-                                    io.to(game.teams[team].players[i]._id).emit('code', generate_code());
-                                } else {
-                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_player', next_player_index);
-                                }
-                            }
-                        }
+                    else {
+                        personal_data.team = msg.team;
                     }
+                    console.log("join_emit");
+                    msg.player._id = socket.id
+                    add_element_for_all(io, game, ".teams." + personal_data.team + ".players", personal_data.player)
+                    socket.emit('personal_data', personal_data);
+
                 }
             });
+
             socket.on('clue_set', msg => {
                 let game = games[msg.game_code];
                 if (game) {
@@ -233,28 +290,46 @@ app.post('/create_game', (req, res) => {
     let word_list = toolbox.generate_word_list(8);
 
     games[new_game_code] = {
-        started_on: Date.now(),
-        teams: {
-            white: {
-                words: word_list.slice(0, 4),
-                clues: [],
-                good_tokens: 0,
-                bad_tokens: 0,
-                players: [],
-                chat: [],
-                current_player: -1
+        open_data: {
+            code: new_game_code,
+            started_on: Date.now(),
+            state: "start",
+            teams: {
+                white: {
+
+                    clues: [],
+                    good_tokens: 0,
+                    bad_tokens: 0,
+                    players: [],
+
+                    current_player: -1
+                },
+                black: {
+                    words: word_list.slice(4, 8),
+                    clues: [],
+                    good_tokens: 0,
+                    bad_tokens: 0,
+                    players: [],
+
+                    current_player: -1
+                }
             },
-            black: {
-                words: word_list.slice(4, 8),
-                clues: [],
-                good_tokens: 0,
-                bad_tokens: 0,
-                players: [],
-                chat: [],
-                current_player: -1
-            }
+            chat: []
         },
-        chat: []
+        secret_data: {
+            teams: {
+                white: {
+                    words: word_list.slice(0, 4),
+                    code: [],
+                    chat: [],
+                },
+                black: {
+                    words: word_list.slice(4, 8),
+                    code: [],
+                    chat: [],
+                }
+            }
+        }
     };
 
     res.json({ game_code: new_game_code })

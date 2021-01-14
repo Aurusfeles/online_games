@@ -13,7 +13,7 @@
       >
         <div
           class="player_name"
-          :class="{ you: player_obj.name == player.name }"
+          :class="{ you: player_index == personal_info.player_index }"
         >
           {{ player_obj.name }}
         </div>
@@ -25,11 +25,9 @@
 <script>
 export default {
   props: {
-    game_code: String,
     game_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
+    personal_info: Object,
   },
 };
 </script>

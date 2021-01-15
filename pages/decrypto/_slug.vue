@@ -6,12 +6,11 @@
       :personal_data="personal_data"
     />
     <Join
-      v-if="personal_data == {}"
+      v-if="personal_data.player_index == -1"
       :socket="socket"
-      :game_data="game_data"
       :game_code_to_join="game_code_to_join"
     />
-    <div class="panel_section">
+    <div v-else class="panel_section">
       <div
         v-for="(panel, panel_index) in panels"
         :key="panel_index"
@@ -44,6 +43,7 @@ export default {
       panels: [],
       socket: null,
       game_data: {},
+      game_code_to_join: "",
       personal_data: {
         player_index: -1,
         team: "idc",
@@ -72,36 +72,40 @@ export default {
 
     this.socket.on("game_data", (msg) => (this.game_data = msg));
     this.socket.on("personal_data", (msg) => {
+      console.log("personal data", msg);
       this.personal_data = msg;
     });
 
     this.socket.on("change_data", (msg) => {
-      let obj = toolbox.resolve_path(game_data, msg.path);
+      console.log("change", msg);
+      let obj = toolbox.resolve_path(this.game_data, msg.path);
       if (obj) {
         this.$set(obj, msg.key, msg.new_value);
-        check_state();
+        this.check_state();
       }
     });
 
     this.socket.on("add_element", (msg) => {
-      let obj = toolbox.resolve_path(game_data, msg.path);
+      console.log("add_element", msg);
+      let obj = toolbox.resolve_path(this.game_data, msg.path);
       if (obj) {
-        obj.push(msg.new_element);
-        check_state();
+        obj.push(msg.element);
+        this.check_state();
       }
     });
 
     this.socket.on("delete_element", (msg) => {
-      let obj = toolbox.resolve_path(game_data, msg.path);
+      console.log("delete", msg);
+      let obj = toolbox.resolve_path(this.game_data, msg.path);
       if (obj) {
         obj.splice(msg.element_index, 1);
-        check_state();
+        this.check_state();
       }
     });
 
     this.socket.on("code", (msg) => {
       console.log("code");
-      this.personal_data.code = msg;
+      this.$set(this.personal_data, "code", msg);
     });
 
     if (this.slug) {
@@ -118,8 +122,8 @@ export default {
         case "first_clues_making":
         case "clues_making":
           if (
-            this.game_data.teams[this.team].current_player_index ==
-            this.player_index
+            this.game_data.teams[this.personal_data.team]
+              .current_player_index == this.personal_data.player_index
           ) {
             this.panels = ["Words", "EnterClues", "WordsClues"];
           } else {

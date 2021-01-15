@@ -57,6 +57,7 @@ export default {
   },
   methods: {
     join() {
+      console.log("join emit!");
       this.socket.emit("join_game", {
         game_code: this.game_code_to_join,
         team: this.team,

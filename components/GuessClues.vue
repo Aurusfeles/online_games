@@ -53,7 +53,7 @@ export default {
     },
     send_guess() {
       this.socket.emit("change_data", {
-        game_code: this.game_data.game_code,
+        game_code: this.game_data.code,
         path:
           ".teams." +
           this.personal_data.team +

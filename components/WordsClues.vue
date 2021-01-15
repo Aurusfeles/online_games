@@ -18,16 +18,14 @@
 <script>
 export default {
   props: {
-    game_code: String,
     game_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
+    personal_data: Object,
   },
   methods: {
     word(index) {
-      if (this.game_data.current_team == this.team) {
-        return this.game_data.teams[this.team].words[index];
+      if (this.game_data.current_team == this.personal_data.team) {
+        return this.personal_data.word_list[index];
       } else {
         return "Mot mystère " + index + 1;
       }

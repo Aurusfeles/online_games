@@ -6,10 +6,10 @@
         >{{ number + 1 }}
       </span>
     </div>
-    <div v-for="number in player.code" :key="number">
-      Pour le mot {{ personal_data.word_list[number] }}({{ number }}):<input
-        v-model="texts[number]"
-      />
+    <div v-for="number in personal_data.code" :key="number">
+      Pour le mot n°{{ number + 1 }} ({{
+        personal_data.word_list[number].toUpperCase()
+      }}) :<input v-model="texts[number]" />
     </div>
     <button @click="send_clues">Send clues</button>
   </div>
@@ -29,7 +29,7 @@ export default {
   methods: {
     send_clues() {
       this.socket.emit("clue_set", {
-        game_code: this.game_code,
+        game_code: this.game_data.code,
         player_index: this.personal_data.player_index,
         team: this.personal_data.team,
         clue: {

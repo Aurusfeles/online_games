@@ -13,7 +13,7 @@
       >
         <div
           class="player_name"
-          :class="{ you: player_index == personal_info.player_index }"
+          :class="{ you: player_index == personal_data.player_index }"
         >
           {{ player_obj.name }}
         </div>
@@ -27,7 +27,7 @@ export default {
   props: {
     game_data: Object,
     socket: Object,
-    personal_info: Object,
+    personal_data: Object,
   },
 };
 </script>

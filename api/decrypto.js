@@ -15,10 +15,10 @@ let io = null
 
 function get_next_player_index(team) {
     console.log(team)
-    if (team.current_player == team.players.length - 1) {
+    if (team.current_player_index == team.players.length - 1) {
         return 0;
     }
-    return team.current_player + 1;
+    return team.current_player_index + 1;
 }
 
 function everyone_ready(game) {
@@ -85,9 +85,9 @@ function player(team, player_name) {
 }
 
 function change_data_for_all(io, game, path, key, new_value) {
-    let obj = toolbox.resolve_path(game, msg.path);
+    let obj = toolbox.resolve_path(game, path);
     if (obj) {
-        this.$set(obj, key, new_value);
+        obj[key] = new_value;
         io.to(game.code).emit('change_data', { path: path, key: key, new_value: new_value });
         return true;
     }
@@ -120,14 +120,21 @@ function check_state(game) {
     switch (game.state) {
         case "start":
             if (everyone_ready(game)) {
+
+
                 // A FAIRE: Vérifier que toutes les équipes ont au moins 2 joueurs                
                 // A FAIRE: faire un mode 3 joueurs (une équipe de 2, et un joueur seul qui ne fait que deviner le code)                        
+
+
+                // entering "first_clues_making" state
                 change_data_for_all(io, game, ".", "state", "first_clues_making");
+
                 for (const team in game.teams) {
-                    let next = get_next_player_index(game.teams[team]);
-                    change_data_for_all(io, game, ".teams." + team, "current_player", next);
-                    change_data_for_all(io, game, ".teams." + team + ".players[" + next + "]", "ready", false);
-                    io.to(game.teams[team].players[next]._id).emit('code', generate_code());
+                    if (game.teams[team].players.length > 0) {
+                        let current_player_index = game.teams[team].current_player_index;
+                        change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", false);
+                        io.to(game.teams[team].players[current_player_index]._id).emit('code', generate_code());
+                    }
                 }
             }
             break;
@@ -138,6 +145,8 @@ function check_state(game) {
                     let current_player_index = game.teams[team].current_player_index;
                     change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", true);
                 }
+
+                // entering "first_clues_guessing" state
                 change_data_for_all(io, game, ".", "state", "first_clues_guessing");
             }
             break;
@@ -154,7 +163,7 @@ function check_state(game) {
                 change_data_for_all(io, game, ".", "state", "clues_making");
                 for (const team in game.teams) {
                     let next = get_next_player_index(game.teams[team]);
-                    change_data_for_all(io, game, ".teams." + team, "current_player", next);
+                    change_data_for_all(io, game, ".teams." + team, "current_player_index", next);
                     change_data_for_all(io, game, ".teams." + team + ".players[" + next + "]", "ready", false);
                     io.to(game.teams[team].players[next]._id).emit('code', generate_code());
                 }
@@ -169,8 +178,8 @@ function check_state(game) {
                     change_data_for_all(io, game, ".", "state", "results");
                 }
                 else {
-                    let current_player = game.teams[next_team].current_player;
-                    change_data_for_all(io, game, ".teams." + team + ".players[" + current_player + "]", "ready", true);
+                    let current_player_index = game.teams[next_team].current_player_index;
+                    change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", true);
                     change_data_for_all(io, game, ".", "current_team", next_team);
                 }
             }
@@ -197,6 +206,7 @@ app.post('/create_game', (req, res) => {
             });
 
             socket.on("game_data", (msg) => {
+                console.log("game_data");
                 let game = games[msg.game_code];
                 if (game) {
                     socket.emit('game_data', game.open_data);
@@ -206,6 +216,7 @@ app.post('/create_game', (req, res) => {
             socket.on("change_data", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
+                    console.log("change", msg);
                     if (change_data_for_all(io, game.open_data, msg.path, msg.key, msg.new_value)) {
                         check_state(game.open_data);
                     }
@@ -215,6 +226,7 @@ app.post('/create_game', (req, res) => {
             socket.on("add_element", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
+                    console.log("add", msg);
                     if (add_element_for_all(io, game.open_data, msg.path, msg.new_element)) {
                         check_state(game.open_data);
                     }
@@ -224,6 +236,7 @@ app.post('/create_game', (req, res) => {
             socket.on("delete_element", (msg) => {
                 let game = games[msg.game_code];
                 if (game) {
+                    console.log("delete", msg);
                     if (delete_element_for_all(io, game.open_data, msg.path, msg.element_index)) {
                         check_state(game.open_data);
                     }
@@ -234,24 +247,21 @@ app.post('/create_game', (req, res) => {
                 socket.join(msg.game_code);
                 console.log("join");
                 let game = games[msg.game_code];
-                let personal_data = { player: msg.player }
                 if (game) {
+                    let new_player = msg.player;
                     if (msg.team == "idc") {
                         let nb_players = 9999;
-                        for (let team in game.teams) {
-                            if (game.teams[team].players.length < nb_players) {
-                                personal_data.team = team;
-                                nb_players = game.teams[team].players.length
+                        for (let team in game.open_data.teams) {
+                            if (game.open_data.teams[team].players.length < nb_players) {
+                                msg.team = team;
+                                nb_players = game.open_data.teams[team].players.length
                             }
                         }
                     }
-                    else {
-                        personal_data.team = msg.team;
-                    }
-                    console.log("join_emit");
-                    msg.player._id = socket.id
-                    add_element_for_all(io, game, ".teams." + personal_data.team + ".players", personal_data.player)
-                    socket.emit('personal_data', personal_data);
+                    console.log("join_emit", { player_index: game.open_data.teams[msg.team].players.length - 1, team: msg.team });
+                    new_player._id = socket.id
+                    add_element_for_all(io, game.open_data, ".teams." + msg.team + ".players", new_player)
+                    socket.emit('personal_data', { player_index: game.open_data.teams[msg.team].players.length - 1, team: msg.team, word_list: game.secret_data.teams[msg.team].word_list });
 
                 }
             });
@@ -259,22 +269,22 @@ app.post('/create_game', (req, res) => {
             socket.on('clue_set', msg => {
                 let game = games[msg.game_code];
                 if (game) {
-                    player(game.teams[msg.team], msg.player.name).ready = true;
-                    game.teams[msg.team].current_clues = msg.texts;
-                    game.teams[msg.team].current_code = msg.code;
+                    player(game.open_datateams[msg.team], msg.player.name).ready = true;
+                    game.open_datateams[msg.team].current_clues = msg.texts;
+                    game.open_data.teams[msg.team].current_code = msg.code;
 
                     //A FAIRE: déterminer la prochaine équipe dont on doit deviner les indices
                     let next_team = 'white';
 
                     if (everyone_ready(game)) {
                         for (const team in game.teams) {
-                            for (let i = 0; i < game.teams[team].players.length; i++) {
-                                if (team == next_team && i == game.teams[team].current_player) {
-                                    game.teams[team].players[i].ready = true;
-                                    io.to(game.teams[team].players[i]._id).emit('waiting_for_guesses');
+                            for (let i = 0; i < game.open_data.teams[team].players.length; i++) {
+                                if (team == next_team && i == game.teams[team].current_player_index) {
+                                    game.open_data.teams[team].players[i].ready = true;
+                                    io.to(game.open_data.teams[team].players[i]._id).emit('waiting_for_guesses');
                                 } else {
-                                    game.teams[team].players[i].ready = false;
-                                    io.to(game.teams[team].players[i]._id).emit('clues_to_guess', { team: next_team, clues: game.teams[next_team].current_clues });
+                                    game.open_data.teams[team].players[i].ready = false;
+                                    io.to(game.open_data.teams[team].players[i]._id).emit('clues_to_guess', { team: next_team, clues: game.teams[next_team].current_clues });
                                 }
                             }
                         }
@@ -294,24 +304,21 @@ app.post('/create_game', (req, res) => {
             code: new_game_code,
             started_on: Date.now(),
             state: "start",
+            current_team: "white",
             teams: {
                 white: {
-
                     clues: [],
                     good_tokens: 0,
                     bad_tokens: 0,
                     players: [],
-
-                    current_player: -1
+                    current_player_index: 0
                 },
                 black: {
-                    words: word_list.slice(4, 8),
                     clues: [],
                     good_tokens: 0,
                     bad_tokens: 0,
                     players: [],
-
-                    current_player: -1
+                    current_player_index: 0
                 }
             },
             chat: []
@@ -319,12 +326,12 @@ app.post('/create_game', (req, res) => {
         secret_data: {
             teams: {
                 white: {
-                    words: word_list.slice(0, 4),
+                    word_list: word_list.slice(0, 4),
                     code: [],
                     chat: [],
                 },
                 black: {
-                    words: word_list.slice(4, 8),
+                    word_list: word_list.slice(4, 8),
                     code: [],
                     chat: [],
                 }

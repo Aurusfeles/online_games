@@ -6,16 +6,14 @@
 <script>
 export default {
   props: {
-    game_code: String,
     game_data: Object,
     socket: Object,
-    player: Object,
-    team: String,
+    personal_data: Object,
   },
   computed: {
     current_player() {
-      return this.game_data.teams[this.team].players[
-        this.game_data.teams[this.team].current_player
+      return this.game_data.teams[this.personal_data.team].players[
+        this.game_data.teams[this.personal_data.team].current_player_index
       ];
     },
   },

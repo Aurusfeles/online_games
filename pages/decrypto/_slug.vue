@@ -122,13 +122,26 @@ export default {
         case "first_clues_making":
         case "clues_making":
           if (
+            this.game_data.teams[this.personal_data.team].players[
+              this.personal_data.player_index
+            ].ready
+          ) {
+            this.panels = ["Words", "WaitingForPlayer", "WordsClues"];
+          } else {
+            this.panels = ["Words", "EnterClues", "WordsClues"];
+          }
+          break;
+        case "first_clues_guessing":
+        case "clues_guessing":
+          if (
             this.game_data.teams[this.personal_data.team]
               .current_player_index == this.personal_data.player_index
           ) {
-            this.panels = ["Words", "EnterClues", "WordsClues"];
+            this.panels = ["Words", "WaitingForGuesses", "WordsClues"];
           } else {
-            this.panels = ["Words", "WaitingForPlayer", "WordsClues"];
+            this.panels = ["Words", "GuessClues", "WordsClues"];
           }
+          break;
       }
     },
   },

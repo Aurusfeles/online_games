@@ -13,7 +13,11 @@
       >
         <div
           class="player_name"
-          :class="{ you: player_index == personal_data.player_index }"
+          :class="{
+            you:
+              player_index == personal_data.player_index &&
+              team_name == personal_data.team,
+          }"
         >
           {{ player_obj.name }}
         </div>

@@ -1,6 +1,6 @@
 <template>
   <div>
-    Veuillez patienter, {{ current_player.name }} prépare ses indices...
+    {{ message }}
   </div>
 </template>
 <script>
@@ -11,10 +11,31 @@ export default {
     personal_data: Object,
   },
   computed: {
-    current_player() {
-      return this.game_data.teams[this.personal_data.team].players[
-        this.game_data.teams[this.personal_data.team].current_player_index
-      ];
+    current_player_list() {
+      let current_players = [];
+      for (const team in this.game_data.teams) {
+        for (const player of this.game_data.teams[team].players) {
+          if (!player.ready) {
+            current_players.push(player.name);
+          }
+        }
+      }
+      return current_players;
+    },
+    message() {
+      if (this.current_player_list.length > 1) {
+        return (
+          "Veuillez patienter, " +
+          this.current_player_list.join(",") +
+          " préparent leurs indices..."
+        );
+      } else {
+        return (
+          "Veuillez patienter, " +
+          this.current_player_list.join(",") +
+          " prépare ses indices..."
+        );
+      }
     },
   },
   methods: {},

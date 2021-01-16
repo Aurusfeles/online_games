@@ -43,4 +43,7 @@ export default {
 </script>
 
 <style scoped>
+.ready {
+  background-color: green;
+}
 </style>

@@ -31,7 +31,7 @@ export default {
   },
   computed: {
     word_list() {
-      if (this.game_data.current_team == this.team) {
+      if (this.clues_team == this.personal_data.team) {
         return this.personal_data.word_list;
       } else {
         return [
@@ -43,13 +43,30 @@ export default {
       }
     },
     clues() {
-      return this.game_data.teams[this.game_data.current_team].current_clues;
+      return this.game_data.teams[this.clues_team].current_clues;
+    },
+    clues_team() {
+      if (this.game_data.state == "first_clues_guessing") {
+        return this.personal_data.team;
+      } else {
+        return this.game_data.current_team;
+      }
     },
   },
   methods: {
     click() {
-      this.ready = true;
       this.send_guess();
+      this.ready = true;
+      this.socket.emit("change_data", {
+        game_code: this.game_data.code,
+        path:
+          ".teams." +
+          this.personal_data.team +
+          ".players." +
+          this.personal_data.player_index,
+        key: "ready",
+        value: true,
+      });
     },
     send_guess() {
       this.socket.emit("change_data", {
@@ -59,8 +76,9 @@ export default {
           this.personal_data.team +
           ".players." +
           this.personal_data.player_index,
-        key: "code",
+        key: "current_guess",
         value: this.reply,
+        secret: true,
       });
     },
   },

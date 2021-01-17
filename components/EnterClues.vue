@@ -28,14 +28,28 @@ export default {
   },
   methods: {
     send_clues() {
-      this.socket.emit("clue_set", {
+      this.socket.emit("change_data", {
         game_code: this.game_data.code,
-        player_index: this.personal_data.player_index,
-        team: this.personal_data.team,
-        clue: {
-          code: this.personal_data.code,
-          texts: this.texts,
-        },
+        path: ".teams." + this.personal_data.team,
+        key: "current_clues",
+        value: this.texts,
+      });
+      this.socket.emit("change_data", {
+        game_code: this.game_data.code,
+        path: ".teams." + this.personal_data.team,
+        key: "current_code",
+        value: this.personal_data.code,
+        secret: true,
+      });
+      this.socket.emit("change_data", {
+        game_code: this.game_data.code,
+        path:
+          ".teams." +
+          this.personal_data.team +
+          ".players." +
+          this.personal_data.player_index,
+        key: "ready",
+        value: true,
       });
     },
   },

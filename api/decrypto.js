@@ -13,13 +13,13 @@ let server = null
 let io = null
 
 function get_next_team(game, current_team) {
-    let current_team_id = game.teams[current_team].id;
+    let current_team_id = game.open_data.teams[current_team].id;
     let first_team;
-    for (const team in game.teams) {
-        if (game.teams[team].id == 0) {
+    for (const team in game.open_data.teams) {
+        if (game.open_data.teams[team].id == 0) {
             first_team = team;
         }
-        if (game.teams[team].id == current_team_id + 1) {
+        if (game.open_data.teams[team].id == current_team_id + 1) {
             return team;
         }
     }
@@ -36,20 +36,22 @@ function get_next_player_index(team) {
 }
 
 function everyone_ready(game) {
-    for (const team in game.teams) {
-        for (const player of game.teams[team].players) {
+    for (const team in game.open_data.teams) {
+        for (const player of game.open_data.teams[team].players) {
             if (!player.ready) {
+                console.log("not ready!")
                 return false
             }
         }
     }
+    console.log("all ready!!!")
     return true;
 }
 
 
 function clear_ready(game) {
-    for (const team in game.teams) {
-        for (let player of game.teams[team].players) {
+    for (const team in game.open_data.teams) {
+        for (let player of game.open_data.teams[team].players) {
             player.ready = false;
         }
     }
@@ -80,51 +82,87 @@ function generate_code() {
 
 
 function change_data_for_all(io, game, path, key, new_value) {
-    let obj = toolbox.resolve_path(game, path);
+    let obj = toolbox.resolve_path(game.open_data, path);
     if (obj) {
         obj[key] = new_value;
-        io.to(game.code).emit('change_data', { path: path, key: key, new_value: new_value });
+        io.to(game.open_data.code).emit('change_data', { path: path, key: key, new_value: new_value });
         return true;
     }
     return false;
 }
 
 function add_element_for_all(io, game, path, new_element) {
-    let obj = toolbox.resolve_path(game, path);
+    let obj = toolbox.resolve_path(game.open_data, path);
     if (obj) {
         obj.push(new_element);
-        io.to(game.code).emit('add_element', { path: path, element: new_element });
+        io.to(game.open_data.code).emit('add_element', { path: path, element: new_element });
         return true;
     }
     return false;
 }
 
 function delete_element_for_all(io, game, path, element_index) {
-    let obj = toolbox.resolve_path(game, path);
+    let obj = toolbox.resolve_path(game.open_data, path);
     if (obj) {
         obj.splice(element_index, 1);
-        io.to(game.code).emit('delete_element', { path: path, element: element_index });
+        io.to(game.open_data.code).emit('delete_element', { path: path, element: element_index });
         return true;
     }
     return false;
 }
 
 function every_clues_exposed(game) {
-    for (const team in game.teams) {
-        if (!game.teams[team].clues_exposed) {
+    for (const team in game.open_data.teams) {
+        if (game.open_data.teams[team].current_code.length == 0) {
             return false
         }
     }
     return true;
 }
 
-function process_guesses(game) {
+function reset_round_data(game) {
+    for (const team in game.open_data.teams) {
+        change_data_for_all(io, game, ".teams." + team, "current_code", []);
+        change_data_for_all(io, game, ".teams." + team, "current_guess", []);
+        change_data_for_all(io, game, ".teams." + team, "current_clues", []);
+        game.secret_data.teams[team].current_code = [];
+        game.secret_data.teams[team].current_guess = [];
+        for (const player of game.secret_data.teams[team].players) {
+            player.current_guess = [];
+        }
+    }
     return true;
+}
 
+function correct_guess(guess, code) {
+    for (let i = 0; i < code.length; i++) {
+        if (code[i] != guess[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function expose_team_code(io, game, team) {
+    change_data_for_all(io, game, ".teams." + team, "current_code", game.secret_data.teams[team].current_code);
+    for (let i = 0; i < game.secret_data.teams[team].current_code.length; i++) {
+        game.open_data.teams[team].clues[game.secret_data.teams[team].current_code[i]].push(game.open_data.teams[team].current_clues[i]);
+    }
+}
+
+
+function all_teams_have_guessed(game) {
+    for (const team in game.open_data.teams) {
+        if (game.open_data.teams[team].current_guess.length == 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function check_state(game) {
-    switch (game.state) {
+    console.log("state", game.open_data.state)
+    switch (game.open_data.state) {
         case "start":
             if (everyone_ready(game)) {
 
@@ -136,11 +174,11 @@ function check_state(game) {
                 // entering "first_clues_making" state
                 change_data_for_all(io, game, ".", "state", "first_clues_making");
 
-                for (const team in game.teams) {
-                    if (game.teams[team].players.length > 0) {
-                        let current_player_index = game.teams[team].current_player_index;
+                for (const team in game.open_data.teams) {
+                    if (game.open_data.teams[team].players.length > 0) {
+                        let current_player_index = game.open_data.teams[team].current_player_index;
                         change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", false);
-                        io.to(game.teams[team].players[current_player_index]._id).emit('code', generate_code());
+                        io.to(game.open_data.teams[team].players[current_player_index]._id).emit('code', generate_code());
                     }
                 }
             }
@@ -148,8 +186,8 @@ function check_state(game) {
         case "first_clues_making":
             if (everyone_ready(game)) {
                 clear_ready(game);
-                for (const team in game.teams) {
-                    let current_player_index = game.teams[team].current_player_index;
+                for (const team in game.open_data.teams) {
+                    let current_player_index = game.open_data.teams[team].current_player_index;
                     change_data_for_all(io, game, ".teams." + team + ".players[" + current_player_index + "]", "ready", true);
                 }
 
@@ -159,9 +197,16 @@ function check_state(game) {
             break;
         case "first_clues_guessing":
             if (everyone_ready(game)) {
+                for (const team in game.secret_data.teams) {
+                    expose_team_code(io, game, team);
+                    change_data_for_all(io, game, ".teams." + team, "current_guess", game.secret_data.teams[team].current_guess);
+                    if (!correct_guess(game.secret_data.teams[team].current_guess, game.secret_data.teams[team].current_code)) {
+                        change_data_for_all(io, game, ".teams." + team, "bad_tokens", game.open_data.teams[team].bad_tokens + 1);
+                    }
+                }
                 change_data_for_all(io, game, ".", "state", "first_results");
                 clear_ready(game);
-                process_guesses(game);  // A faire!! code is revealed, clues are put in correct table columns, score is update
+
             }
             break;
 
@@ -169,13 +214,14 @@ function check_state(game) {
         case "first_results":
         case "end_of_round_results":
             if (everyone_ready(game)) {
-                change_data_for_all(io, game, ".", "first_team_to_expose", get_next_team(game.first_team_to_expose));
+                reset_round_data(game);
+                change_data_for_all(io, game, ".", "first_team_to_expose", get_next_team(game.open_data.first_team_to_expose));
                 change_data_for_all(io, game, ".", "state", "clues_making");
-                for (const team in game.teams) {
-                    let next = get_next_player_index(game.teams[team]);
+                for (const team in game.open_data.teams) {
+                    let next = get_next_player_index(game.open_data.teams[team]);
                     change_data_for_all(io, game, ".teams." + team, "current_player_index", next);
                     change_data_for_all(io, game, ".teams." + team + ".players[" + next + "]", "ready", false);
-                    io.to(game.teams[team].players[next]._id).emit('code', generate_code());
+                    io.to(game.open_data.teams[team].players[next]._id).emit('code', generate_code());
                 }
             }
             break;
@@ -184,8 +230,8 @@ function check_state(game) {
             if (everyone_ready(game)) {
                 change_data_for_all(io, game, ".", "state", "clues_guessing");
 
-                let next_team = get_next_team(game, game.current_team);
-                let current_player_index = game.teams[next_team].current_player_index;
+                let next_team = get_next_team(game, game.open_data.current_team);
+                let current_player_index = game.open_data.teams[next_team].current_player_index;
                 change_data_for_all(io, game, ".teams." + next_team + ".players[" + current_player_index + "]", "ready", true);
                 change_data_for_all(io, game, ".", "current_team", next_team);
             }
@@ -195,23 +241,25 @@ function check_state(game) {
             if (everyone_ready(game)) {
                 clear_ready(game);
                 change_data_for_all(io, game, ".", "state", "clues_guessing");
-                let current_player_index = game.teams[game.first_team_to_expose].current_player_index;
-                change_data_for_all(io, game, ".teams." + game.first_team_to_expose + ".players[" + current_player_index + "]", "ready", true);
-                change_data_for_all(io, game, ".", "current_team", game.first_team_to_expose);
+                let current_player_index = game.open_data.teams[game.first_team_to_expose].current_player_index;
+                change_data_for_all(io, game, ".teams." + game.open_data.first_team_to_expose + ".players[" + current_player_index + "]", "ready", true);
+                change_data_for_all(io, game, ".", "current_team", game.open_data.first_team_to_expose);
 
             }
             break;
 
         case "clues_guessing":
-            if (every_clues_exposed(game)) {
-                process_guesses(game);  // A faire!! code is revealed, clues are put in correct table columns, score is update
-                change_data_for_all(io, game, ".", "state", "end_of_round_results");
-                clear_ready(game);
-            }
-            else {
-                change_data_for_all(io, game, ".", "state", "results");
-                clear_ready(game);
+            if (all_teams_have_guessed(game)) {
+                if (every_clues_exposed(game)) {
+                    process_guesses(game);  // A faire!! code is revealed, clues are put in correct table columns, score is update
+                    change_data_for_all(io, game, ".", "state", "end_of_round_results");
+                    clear_ready(game);
+                }
+                else {
+                    change_data_for_all(io, game, ".", "state", "results");
+                    clear_ready(game);
 
+                }
             }
             break;
     }
@@ -247,9 +295,18 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("change", msg);
-                    if (change_data_for_all(io, game.open_data, msg.path, msg.key, msg.new_value)) {
-                        check_state(game.open_data);
+                    if (msg.secret == true) {
+                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                        if (obj) {
+                            obj[msg.key] = msg.new_value;
+                        }
                     }
+                    else {
+                        if (change_data_for_all(io, game, msg.path, msg.key, msg.new_value)) {
+                            check_state(game);
+                        }
+                    }
+
                 }
             });
 
@@ -257,8 +314,17 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("add", msg);
-                    if (add_element_for_all(io, game.open_data, msg.path, msg.new_element)) {
-                        check_state(game.open_data);
+                    if (msg.secret == true) {
+                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                        if (obj) {
+                            obj.push(msg.new_element);
+                        }
+                    }
+                    else {
+                        if (add_element_for_all(io, game, msg.path, msg.new_element)) {
+                            check_state(game);
+                        }
+
                     }
                 }
             });
@@ -267,8 +333,17 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("delete", msg);
-                    if (delete_element_for_all(io, game.open_data, msg.path, msg.element_index)) {
-                        check_state(game.open_data);
+                    if (msg.secret == true) {
+                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                        if (obj) {
+                            obj.splice(msg.element_index, 1);
+                        }
+                    }
+                    else {
+                        if (delete_element_for_all(io, game, msg.path, msg.element_index)) {
+                            check_state(game);
+                        }
+
                     }
                 }
             });
@@ -288,21 +363,11 @@ app.post('/create_game', (req, res) => {
                             }
                         }
                     }
-                    console.log("join_emit", { player_index: game.open_data.teams[msg.team].players.length - 1, team: msg.team });
                     new_player._id = socket.id
-                    add_element_for_all(io, game.open_data, ".teams." + msg.team + ".players", new_player)
+                    add_element_for_all(io, game, ".teams." + msg.team + ".players", new_player)
+                    game.secret_data.teams[msg.team].players.push(new_player);
+                    console.log("join_emit", { player_index: game.open_data.teams[msg.team].players.length - 1, team: msg.team });
                     socket.emit('personal_data', { player_index: game.open_data.teams[msg.team].players.length - 1, team: msg.team, word_list: game.secret_data.teams[msg.team].word_list });
-
-                }
-            });
-
-            socket.on('clue_set', msg => {
-                let game = games[msg.game_code];
-                if (game) {
-                    change_data_for_all(io, game.open_data, ".teams." + msg.team + ".players." + msg.player_index, "ready", true);
-                    change_data_for_all(io, game.open_data, ".teams." + msg.team, "current_clues", msg.texts);
-                    game.secret_data.teams[msg.team].current_code = msg.code;
-                    check_state(game.open_data);
 
                 }
             });
@@ -323,21 +388,26 @@ app.post('/create_game', (req, res) => {
             teams: {
                 white: {
                     id: 0,
-                    clues_exposed: false,
-                    clues: [],
+                    clues: [[], [], [], []],
                     good_tokens: 0,
                     bad_tokens: 0,
                     players: [],
-                    current_player_index: 0
+                    current_player_index: 0,
+                    current_guess: [],
+                    current_code: [],
+                    current_clues: [],
+
                 },
                 black: {
                     id: 1,
-                    clues_exposed: false,
-                    clues: [],
+                    clues: [[], [], [], []],
                     good_tokens: 0,
                     bad_tokens: 0,
                     players: [],
-                    current_player_index: 0
+                    current_player_index: 0,
+                    current_guess: [],
+                    current_code: [],
+                    current_clues: [],
                 }
             },
             chat: []
@@ -348,11 +418,13 @@ app.post('/create_game', (req, res) => {
                     word_list: word_list.slice(0, 4),
                     current_code: [],
                     chat: [],
+                    players: [],
                 },
                 black: {
                     word_list: word_list.slice(4, 8),
                     current_code: [],
                     chat: [],
+                    players: [],
                 }
             }
         }

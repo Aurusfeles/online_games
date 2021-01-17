@@ -24,10 +24,13 @@ export default {
   },
   methods: {
     word(index) {
-      if (this.game_data.current_team == this.personal_data.team) {
+      if (
+        this.game_data.state == "first_clues_making" ||
+        this.game_data.current_team == this.personal_data.team
+      ) {
         return this.personal_data.word_list[index];
       } else {
-        return "Mot mystère " + index + 1;
+        return "Mot mystère " + (index + 1);
       }
     },
   },
@@ -37,10 +40,13 @@ export default {
 <style>
 .clue_section {
   display: flex;
+  width: 100%;
+  height: 100%;
 }
 
 .clue_column {
   border: 1px solid #ffffff;
+  width: 25%;
   flex-grow: 1;
 }
 
@@ -48,6 +54,7 @@ export default {
   font-size: 3vh;
   text-transform: uppercase;
   background: rgba(240, 248, 255, 0.205);
+  text-align: center;
 }
 
 .clue_text {

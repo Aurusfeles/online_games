@@ -80,7 +80,7 @@ export default {
       console.log("change", msg);
       let obj = toolbox.resolve_path(this.game_data, msg.path);
       if (obj) {
-        this.$set(obj, msg.key, msg.new_value);
+        this.$set(obj, msg.key, msg.value);
         this.check_state();
       }
     });

@@ -32,7 +32,7 @@ export default {
             ".players." +
             this.personal_data.player_index,
           key: "ready",
-          new_value: true,
+          value: true,
         });
       }
     },

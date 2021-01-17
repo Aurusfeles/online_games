@@ -81,11 +81,11 @@ function generate_code() {
 }
 
 
-function change_data_for_all(io, game, path, key, new_value) {
+function change_data_for_all(io, game, path, key, value) {
     let obj = toolbox.resolve_path(game.open_data, path);
     if (obj) {
-        obj[key] = new_value;
-        io.to(game.open_data.code).emit('change_data', { path: path, key: key, new_value: new_value });
+        obj[key] = value;
+        io.to(game.open_data.code).emit('change_data', { path: path, key: key, value: value });
         return true;
     }
     return false;
@@ -110,6 +110,37 @@ function delete_element_for_all(io, game, path, element_index) {
     }
     return false;
 }
+
+function change_data_for_team(io, game, team, path, key, value) {
+    let obj = toolbox.resolve_path(game.open_data, path);
+    if (obj) {
+        obj[key] = value;
+        io.to(game.open_data.code + team).emit('change_data', { path: path, key: key, value: value });
+        return true;
+    }
+    return false;
+}
+
+function add_element_for_team(io, game, team, path, new_element) {
+    let obj = toolbox.resolve_path(game.open_data, path);
+    if (obj) {
+        obj.push(new_element);
+        io.to(game.open_data.code + team).emit('add_element', { path: path, element: new_element });
+        return true;
+    }
+    return false;
+}
+
+function delete_element_for_team(io, game, team, path, element_index) {
+    let obj = toolbox.resolve_path(game.open_data, path);
+    if (obj) {
+        obj.splice(element_index, 1);
+        io.to(game.open_data.code + team).emit('delete_element', { path: path, element: element_index });
+        return true;
+    }
+    return false;
+}
+
 
 function every_clues_exposed(game) {
     for (const team in game.open_data.teams) {
@@ -152,8 +183,8 @@ function expose_team_code(io, game, team) {
 
 
 function all_teams_have_guessed(game) {
-    for (const team in game.open_data.teams) {
-        if (game.open_data.teams[team].current_guess.length == 0) {
+    for (const team in game.secret_data.teams) {
+        if (game.secret_data.teams[team].current_guess.length == 0) {
             return false;
         }
     }
@@ -196,7 +227,8 @@ function check_state(game) {
             }
             break;
         case "first_clues_guessing":
-            if (everyone_ready(game)) {
+            process_guesses(game);
+            if (all_teams_have_guessed(game)) {
                 for (const team in game.secret_data.teams) {
                     expose_team_code(io, game, team);
                     change_data_for_all(io, game, ".teams." + team, "current_guess", game.secret_data.teams[team].current_guess);
@@ -295,18 +327,26 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("change", msg);
-                    if (msg.secret == true) {
-                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
-                        if (obj) {
-                            obj[msg.key] = msg.new_value;
-                        }
-                    }
-                    else {
-                        if (change_data_for_all(io, game, msg.path, msg.key, msg.new_value)) {
-                            check_state(game);
-                        }
-                    }
+                    switch (msg.destination) {
+                        case "secret":
+                            let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                            if (obj) {
+                                obj[msg.key] = msg.value;
+                            }
+                            break;
 
+                        case "team":
+                            if (change_data_for_team(io, game, msg.team, msg.path, msg.key, msg.value)) {
+                                check_state(game);
+                            }
+                            break;
+
+                        case "all":
+                            if (change_data_for_all(io, game, msg.path, msg.key, msg.value)) {
+                                check_state(game);
+                            }
+                            break;
+                    }
                 }
             });
 
@@ -314,17 +354,23 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("add", msg);
-                    if (msg.secret == true) {
-                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
-                        if (obj) {
-                            obj.push(msg.new_element);
-                        }
-                    }
-                    else {
-                        if (add_element_for_all(io, game, msg.path, msg.new_element)) {
-                            check_state(game);
-                        }
-
+                    switch (msg.destination) {
+                        case "secret":
+                            let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                            if (obj) {
+                                obj.push(msg.new_element);
+                            }
+                            break;
+                        case "team":
+                            if (add_element_for_team(io, game, team, msg.path, msg.new_element)) {
+                                check_state(game);
+                            }
+                            break;
+                        case "all":
+                            if (add_element_for_all(io, game, msg.path, msg.new_element)) {
+                                check_state(game);
+                            }
+                            break;
                     }
                 }
             });
@@ -333,23 +379,30 @@ app.post('/create_game', (req, res) => {
                 let game = games[msg.game_code];
                 if (game) {
                     console.log("delete", msg);
-                    if (msg.secret == true) {
-                        let obj = toolbox.resolve_path(game.secret_data, msg.path);
-                        if (obj) {
-                            obj.splice(msg.element_index, 1);
-                        }
-                    }
-                    else {
-                        if (delete_element_for_all(io, game, msg.path, msg.element_index)) {
-                            check_state(game);
-                        }
 
+                    switch (msg.destination) {
+                        case "secret":
+                            let obj = toolbox.resolve_path(game.secret_data, msg.path);
+                            if (obj) {
+                                obj.splice(msg.element_index, 1);
+                            }
+                            break;
+                        case "team":
+                            if (delete_element_for_team(io, game, team, msg.path, msg.element_index)) {
+                                check_state(game);
+                            }
+                            break;
+                        case "all":
+                            if (delete_element_for_all(io, game, msg.path, msg.element_index)) {
+                                check_state(game);
+                            }
+                            break;
                     }
                 }
             });
 
             socket.on('join_game', msg => {
-                socket.join(msg.game_code);
+                socket.join(msg.game_code);// Room for the game
                 console.log("join");
                 let game = games[msg.game_code];
                 if (game) {
@@ -363,6 +416,7 @@ app.post('/create_game', (req, res) => {
                             }
                         }
                     }
+                    socket.join(msg.game_code + msg.team); // Room for the team
                     new_player._id = socket.id
                     add_element_for_all(io, game, ".teams." + msg.team + ".players", new_player)
                     game.secret_data.teams[msg.team].players.push(new_player);

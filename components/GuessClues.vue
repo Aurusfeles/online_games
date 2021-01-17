@@ -78,7 +78,8 @@ export default {
           this.personal_data.player_index,
         key: "current_guess",
         value: this.reply,
-        secret: true,
+        destination: "team",
+        team: this.personal_data.team,
       });
     },
   },
